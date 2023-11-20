@@ -1,0 +1,11 @@
+/customer/node_modules
+/customer/.env
+
+/product/node_modules
+/product/.env
+
+/shopping/node_modules
+/shopping/.env
+
+/gateway/node_modules
+/gateway/.env
