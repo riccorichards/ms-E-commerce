@@ -1,19 +1,54 @@
-import mongoose from "mongoose";
-import { ProductDocument } from "../types/types.product";
+import { Model, DataTypes } from "sequelize";
+import sequelize from "../connectToSequelize";
 
-const product = new mongoose.Schema(
+class Product extends Model {
+  declare id: bigint;
+  declare title: string;
+  declare desc: string;
+  declare price: string;
+  declare image: string;
+  declare discount: number;
+  declare subCatId: number;
+}
+
+Product.init(
   {
-    title: { type: String, required: true, unique: true },
-    desc: { type: String, required: true },
-    image: { type: String, default: null },
-    price: { type: Number, required: true },
-    discount: { type: Number, default: null },
-    feedbacks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product-Feeds" }],
-    subCategoryId: { type: mongoose.Types.ObjectId, ref: "Sub_category" },
+    id: {
+      type: DataTypes.BIGINT,
+      autoIncrement: true,
+      allowNull: false,
+      primaryKey: true,
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    desc: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    price: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    discount: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    subCatId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: "Product",
+  }
 );
 
-const ProductModal = mongoose.model<ProductDocument>("Product", product);
-
-export default ProductModal;
+export default Product;
