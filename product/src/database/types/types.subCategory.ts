@@ -1,15 +1,10 @@
-import mongoose from "mongoose";
-import { MainCategoryDocument } from "./types.mainCategory";
-
-export interface subCagetoryInput {
+export interface SubCatInputType {
   title: string;
   desc: string;
-  mainCategoryId: MainCategoryDocument["_id"];
+  mainCatId: number;
 }
 
-export interface SubCategoryDocument
-  extends subCagetoryInput,
-    mongoose.Document {
-  createAt: Date;
-  updateAt: Date;
+export interface SubCatDocsType extends SubCatInputType {
+  id: number;
+  createdAt: Date;
 }

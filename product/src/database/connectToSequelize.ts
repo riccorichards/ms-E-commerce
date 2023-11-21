@@ -1,14 +1,24 @@
 import { Sequelize } from "sequelize";
-import dotenv from "dotenv";
-dotenv.config();
+import config from "../../config";
+import log from "../utils/logger";
+import { setupAssociation } from "./associations";
 
-const dbName = process.env.DB_NAME!;
-const dbUser = process.env.DB_USER!;
-const dbPassword = process.env.DB_PASSWORD!;
+const dbName = config.dbName!;
+const dbUser = config.dbUser!;
+const dbPassword = config.dbPassword!;
 
-const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
-  host: process.env.DB_HOST,
-  dialect: process.env.DB_DIALECT as any,
+export const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
+  host: config.dbHost,
+  dialect: config.dbDialect as any,
 });
 
-export default sequelize;
+export const connectToMySQL = async () => {
+  try {
+    await sequelize.authenticate();
+    log.info("Connection to the database has been established successfully.");
+    setupAssociation();
+    await sequelize.sync({ force: false });
+  } catch (error: any) {
+    log.error({ err: error.message });
+  }
+};

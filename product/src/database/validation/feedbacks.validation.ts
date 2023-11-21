@@ -2,13 +2,12 @@ import { object, string, TypeOf, number } from "zod";
 
 const reviewPayload = {
   body: object({
-    user: object({
-      username: string(),
-      pictureImg: string(),
+    author: string({
+      required_error: "Author is required!",
     }),
-    review: string({
-      required_error: "Review is required!",
-    }),
+    profileImg: string().optional(),
+    productId: number(),
+    review: string(),
     rating: number(),
   }),
 };

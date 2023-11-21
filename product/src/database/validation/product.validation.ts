@@ -1,10 +1,4 @@
-import mongoose from "mongoose";
 import { object, string, TypeOf, number, z } from "zod";
-const validObjectId = z
-  .string()
-  .refine((value) => mongoose.Types.ObjectId.isValid(value), {
-    message: "Invalid ObjectId",
-  });
 
 const productPayload = {
   body: object({
@@ -15,11 +9,11 @@ const productPayload = {
       required_error: "Description is required!",
     }),
     image: string(),
-    price: number({
+    price: string({
       required_error: "Price is required!",
     }),
-    discount: number(),
-    subCategoryId: z.array(validObjectId),
+    discount: string(),
+    subCatId: number(),
   }),
 };
 

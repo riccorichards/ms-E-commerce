@@ -1,11 +1,9 @@
-import mongoose from "mongoose";
-
-export interface MainCatInput {
+export interface MainCatInputType {
   title: string;
   desc: string;
 }
 
-export interface MainCategoryDocument extends MainCatInput, mongoose.Document {
-  createAt: Date;
-  updateAt: Date;
+export interface MainCatDocsType extends MainCatInputType {
+  id: number;
+  createdAt?: Date;
 }

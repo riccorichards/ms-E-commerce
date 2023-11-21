@@ -1,12 +1,10 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import config from "config";
 import cors from "cors";
-import routes from "../api/routes";
-//import pool from "./connectWithMySQL";
-//import log from "./logger";
-import mongo_connection from "./databases/connectWithMongoDb";
+import api from "../api/api";
+import { connectToMySQL } from "../database/connectToSequelize";
+import config from "../../config";
 const createServer = () => {
   const app = express();
   dotenv.config();
@@ -14,20 +12,12 @@ const createServer = () => {
   app.use(cookieParser());
   app.use(
     cors({
-      origin: config.get<string>("origin"),
+      origin: config.origin,
     })
   );
-  //pool.getConnection((err: any) => {
-  //  if (err) {
-  //    log.error("Error connecting to the database:", err);
-  //  } else {
-  //    log.info(
-  //      `Connected to the database at http://localhost:${config.get("port")}`
-  //    );
-  //  }
-  //});
-  mongo_connection();
-  routes(app);
+
+  connectToMySQL();
+  api(app);
   return app;
 };
 

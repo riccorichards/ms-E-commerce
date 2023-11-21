@@ -1,17 +1,30 @@
-import mongoose from "mongoose";
-import { MainCategoryDocument } from "../types/types.mainCategory";
+import { DataTypes, Model, Sequelize } from "sequelize";
+import { MainCatDocsType, MainCatInputType } from "../types/types.mainCategory";
 
-const main_catgory = new mongoose.Schema(
-  {
-    title: { type: String, required: true, unique: true },
-    desc: { type: String, required: true },
-  },
-  { timestamps: true }
-);
+class MainCat
+  extends Model<MainCatDocsType, MainCatInputType>
+  implements MainCatDocsType
+{
+  public id!: number;
+  public title!: string;
+  public desc!: string;
+  public createdAt?: Date;
+}
 
-const MainCategoryModal = mongoose.model<MainCategoryDocument>(
-  "Main_category",
-  main_catgory
-);
-
-export default MainCategoryModal;
+export const MainCatModal = (sequelize: Sequelize) => {
+  MainCat.init(
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
+      },
+      title: { type: DataTypes.STRING, allowNull: false, unique: true },
+      desc: { type: DataTypes.STRING, allowNull: false },
+      createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    },
+    { sequelize, modelName: "MainCat", timestamps: true }
+  );
+  return MainCat;
+};

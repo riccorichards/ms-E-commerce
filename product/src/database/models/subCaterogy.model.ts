@@ -1,21 +1,47 @@
-import mongoose from "mongoose";
-import { SubCategoryDocument } from "../types/types.subCategory";
+import { Model, Sequelize, DataTypes } from "sequelize";
+import { SubCatDocsType, SubCatInputType } from "../types/types.subCategory";
 
-const sub_category = new mongoose.Schema(
-  {
-    title: { type: String, required: true, unique: true },
-    desc: { type: String, required: true },
-    mainCategoryId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Main_category",
+class SubCat
+  extends Model<SubCatDocsType, SubCatInputType>
+  implements SubCatDocsType
+{
+  public id!: number;
+  public title!: string;
+  public desc!: string;
+  public mainCatId!: number;
+  public createdAt!: Date;
+}
+
+export const SubCatModel = (sequelize: Sequelize) => {
+  SubCat.init(
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      title: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: false,
+      },
+      desc: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      mainCatId: {
+        type: DataTypes.INTEGER,
+        unique: true,
+        allowNull: false,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
     },
-  },
-  { timestamps: true }
-);
+    { sequelize, timestamps: true, modelName: "SubCat" }
+  );
 
-const SubCategoryModal = mongoose.model<SubCategoryDocument>(
-  "Sub_category",
-  sub_category
-);
-
-export default SubCategoryModal;
+  return SubCat;
+};

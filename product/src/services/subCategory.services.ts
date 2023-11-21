@@ -1,67 +1,59 @@
-import { FilterQuery, QueryOptions } from "mongoose";
+import subCatRepo from "../database/repository/subCat.repository";
+import { SubCatInputType } from "../database/types/types.subCategory";
 import log from "../utils/logger";
-import { UpdateOptions } from "sequelize";
-import SubCategoryModal from "../database/models/subCaterogy.model";
-import {
-  SubCategoryDocument,
-  subCagetoryInput,
-} from "../database/types/types.subCategory";
 
-//retrieve all existing categories
-export const getAllSubCat = async () => {
-  try {
-    return await SubCategoryModal.find();
-  } catch (error: any) {
-    log.error("Error while fetching all sub categories:", error.message);
-    throw error;
-  }
-};
+class SubCatService {
+  private repository: subCatRepo;
 
-//retrieve the specific category
-export const findSpecialSubCategory = async (
-  query: FilterQuery<SubCategoryDocument>,
-  options: QueryOptions = { lean: true }
-) => {
-  try {
-    return await SubCategoryModal.findOne(query, {}, options);
-  } catch (error: any) {
-    log.error("Error while fetching sub category:", error.message);
-    throw error;
+  constructor() {
+    this.repository = new subCatRepo();
   }
-};
 
-//create main category
-export const createSubCaterogy = async (input: subCagetoryInput) => {
-  try {
-    return await SubCategoryModal.create(input);
-  } catch (error: any) {
-    log.error("Error while creating sub category:", error.message);
-    throw error;
+  async createSubCatService(input: SubCatInputType) {
+    try {
+      return await this.repository.createSubCut(input);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
   }
-};
+  async getSubCatsService() {
+    try {
+      return await this.repository.getSubCats();
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+  async getSubCatByIdService(id: number) {
+    try {
+      return await this.repository.getSubCatById(id);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+  async updateSubCatService(id: number, input: SubCatInputType) {
+    try {
+      return await this.repository.updateSubCat(id, input);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+  async deleteSubCatService(id: number) {
+    try {
+      return await this.repository.deleteSubCat(id);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+}
 
-//update category
-export const updateSubCategory = async (
-  query: FilterQuery<SubCategoryDocument>,
-  update: UpdateOptions<SubCategoryDocument>,
-  options = {}
-) => {
-  try {
-    return await SubCategoryModal.findOneAndUpdate(query, update, options);
-  } catch (error: any) {
-    log.error("Error while updating sub category:", error.message);
-    throw error;
-  }
-};
-
-//delete main category
-export const deleteSubCategory = async (
-  query: FilterQuery<SubCategoryDocument>
-) => {
-  try {
-    return SubCategoryModal.findOneAndDelete(query);
-  } catch (error: any) {
-    log.error("Error while deleting sub category:", error.message);
-    throw error;
-  }
-};
+export default SubCatService;

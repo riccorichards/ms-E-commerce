@@ -1,22 +1,39 @@
-import mongoose from "mongoose";
+import { DataTypes, Model, Sequelize } from "sequelize";
+import {
+  FeedbacksDocsType,
+  FeedbacksInputType,
+} from "../types/types.feedbacks";
 
-import { ProductReviewDocument } from "../types/types.productReview";
+class Feedbacks
+  extends Model<FeedbacksDocsType, FeedbacksInputType>
+  implements FeedbacksDocsType
+{
+  public id!: number;
+  public author!: string;
+  public profileImg?: string;
+  public productId!: number;
+  public review!: string;
+  public rating!: number;
+  public createdAt?: Date;
+}
 
-const ProductFeeds = new mongoose.Schema(
-  {
-    user: {
-      username: String,
-      profileImg: String,
+export const FeedbacksModal = (sequelize: Sequelize) => {
+  Feedbacks.init(
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+        allowNull: false,
+      },
+      author: { type: DataTypes.STRING, allowNull: false },
+      profileImg: { type: DataTypes.STRING, allowNull: true },
+      productId: { type: DataTypes.INTEGER, allowNull: false },
+      review: { type: DataTypes.STRING, allowNull: true },
+      rating: { type: DataTypes.INTEGER, allowNull: true },
+      createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     },
-    review: { type: String, default: null },
-    rating: { type: Number, default: null },
-  },
-  { timestamps: true }
-);
-
-const ProductFeedsModel = mongoose.model<ProductReviewDocument>(
-  "Product_feeds",
-  ProductFeeds
-);
-
-export default ProductFeedsModel;
+    { sequelize, modelName: "Feedbacks", timestamps: true }
+  );
+  return Feedbacks;
+};
