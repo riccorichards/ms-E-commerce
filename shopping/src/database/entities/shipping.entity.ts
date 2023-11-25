@@ -1,4 +1,4 @@
-import { IsEmail, IsString, Length } from "class-validator";
+import { IsDate, IsEmail, IsString, Length } from "class-validator";
 import {
   Column,
   Entity,
@@ -42,6 +42,7 @@ class Shipping {
   @OneToOne(() => Address, { cascade: true })
   @JoinColumn()
   address: Address;
+
 }
 
 export default Shipping;

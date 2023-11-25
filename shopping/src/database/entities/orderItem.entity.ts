@@ -1,5 +1,11 @@
-import { IsNumber, IsString } from "class-validator";
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { IsDate, IsNumber, IsString } from "class-validator";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 import Order from "./order.entity";
 
 @Entity("orderItem")
@@ -20,6 +26,9 @@ class OrderItem {
   price: string;
 
   @ManyToOne(() => Order, (order) => order.orderItem)
+  @JoinColumn({
+    name: "order_id",
+  })
   order: Order;
 }
 

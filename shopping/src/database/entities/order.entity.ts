@@ -4,12 +4,15 @@ import {
   Column,
   OneToMany,
   OneToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  BaseEntity,
 } from "typeorm";
 import { IsEmail, IsString, Length } from "class-validator";
 import OrderItem from "./orderItem.entity";
 import Payment from "./payment.entity";
 
-@Entity("order")
+@Entity("orders")
 class Order {
   @PrimaryGeneratedColumn()
   id: number;
@@ -29,7 +32,7 @@ class Order {
   @IsString()
   order_status: string;
 
-  @Column()
+  @Column({ nullable: true })
   @IsString()
   total_amount: string;
 
@@ -38,6 +41,12 @@ class Order {
 
   @OneToOne(() => Payment, (payment) => payment.order)
   payment: Payment;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
 
 export default Order;

@@ -1,4 +1,4 @@
-import { IsString, Length } from "class-validator";
+import { IsDate, IsString, Length } from "class-validator";
 import {
   Column,
   Entity,
@@ -26,6 +26,7 @@ class Payment {
   @OneToOne(() => Order, { cascade: true })
   @JoinColumn()
   order: Order;
+
 }
 
 export default Payment;

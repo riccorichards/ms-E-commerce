@@ -1,4 +1,3 @@
-import { validate } from "class-validator";
 import { Repository } from "typeorm";
 import Order from "../entities/order.entity";
 import OrderItem from "../entities/orderItem.entity";
@@ -42,7 +41,10 @@ class ShoppingRepo {
     orderItem: OrderItemInputValidation[]
   ) {
     try {
-      const order = await this.orderRepository.findOneBy({ id: orderId });
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["orderItem"],
+      });
 
       if (!order) {
         throw new Error("Order not found");
@@ -54,9 +56,9 @@ class ShoppingRepo {
           order: order,
         });
         await this.orderItemRepository.save(orderItem);
-
         order.orderItem.push(orderItem);
       }
+      log.info({ order });
       await this.orderRepository.save(order);
 
       return order;
