@@ -32,7 +32,6 @@ export const SubCatModel = (sequelize: Sequelize) => {
       },
       mainCatId: {
         type: DataTypes.INTEGER,
-        unique: true,
         allowNull: false,
       },
       createdAt: {

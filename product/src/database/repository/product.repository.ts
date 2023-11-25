@@ -14,7 +14,9 @@ class ProductRepo {
   }
   async getProducts() {
     try {
-      return await initialize.Product.findAll();
+      return await initialize.Product.findAll({
+        include: [{ model: initialize.Feedbacks, as: "feedbacks" }],
+      });
     } catch (error: any) {
       log.error({
         err: error.message,

@@ -28,6 +28,7 @@ import {
   ReadReviewType,
   UpdateReviewType,
 } from "../database/validation/feedbacks.validation";
+import { verifyJWT } from "./middleware/verifyToken";
 
 const api = (app: Application) => {
   const Mservice = new MainCatService();
@@ -35,6 +36,7 @@ const api = (app: Application) => {
   const Pservice = new ProductService();
   const Fservice = new FeedbacksService();
 
+  app.use(verifyJWT);
   //main category
   app.post(
     "/main-cat",
@@ -42,9 +44,14 @@ const api = (app: Application) => {
       try {
         const { title, desc } = req.body;
 
-        const newProduct = await Mservice.createMainCatService({ title, desc });
+        const mainCat = await Mservice.createMainCatService({ title, desc });
 
-        return res.status(201).json(newProduct);
+        if (!mainCat)
+          return res
+            .status(400)
+            .json({ msg: "Error while creating a new main category" });
+
+        return res.status(201).json(mainCat);
       } catch (error: any) {
         log.error({ err: error.message });
       }
@@ -52,9 +59,11 @@ const api = (app: Application) => {
   );
   app.get("/main-cat", async (req: Request, res: Response) => {
     try {
-      const products = await Mservice.getMainCatsService();
+      const mainCat = await Mservice.getMainCatsService();
 
-      return res.status(200).json(products);
+      if (!mainCat)
+        return res.status(404).json({ msg: "Error while fetching mainCat" });
+      return res.status(200).json(mainCat);
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -64,8 +73,12 @@ const api = (app: Application) => {
     async (req: Request<ReadMainCatType["params"]>, res: Response) => {
       try {
         const id = parseInt(req.params._id);
-        const product = await Mservice.getMainCatByIdService(id);
-        return res.status(200).json(product);
+        const mainCat = await Mservice.getMainCatByIdService(id);
+        if (!mainCat)
+          return res
+            .status(404)
+            .json({ msg: "Error while fetching the main Cat" });
+        return res.status(200).json(mainCat);
       } catch (error: any) {
         log.error({ err: error.message });
       }
@@ -76,12 +89,14 @@ const api = (app: Application) => {
     async (req: Request<UpdateMainCatType["params"]>, res: Response) => {
       try {
         const id = parseInt(req.params._id);
-        const updatedProduct = await Mservice.updateMainCatService(
+        const updatedmainCat = await Mservice.updateMainCatService(
           id,
           req.body
         );
 
-        return res.status(200).json(updatedProduct);
+        if (!updatedmainCat)
+          return res.status(404).json({ msg: "Error while updating main cat" });
+        return res.status(200).json(updatedmainCat);
       } catch (error: any) {
         log.error({ err: error.message });
       }
@@ -107,6 +122,10 @@ const api = (app: Application) => {
     async (req: Request<{}, {}, CreateSubCatType["body"]>, res: Response) => {
       try {
         const newSubCat = await Sservice.createSubCatService(req.body);
+        if (!newSubCat)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new sub cat" });
         return res.status(201).json(newSubCat);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -116,6 +135,10 @@ const api = (app: Application) => {
   app.get("/sub-cat", async (req: Request, res: Response) => {
     try {
       const allSubCategories = await Sservice.getSubCatsService();
+      if (!allSubCategories)
+        return res
+          .status(404)
+          .json({ msg: "Error while a fetching all sub cat" });
       return res.status(200).json(allSubCategories);
     } catch (error: any) {
       log.error({ err: error.message });
@@ -127,6 +150,10 @@ const api = (app: Application) => {
       try {
         const id = parseInt(req.params._id);
         const subCategory = await Sservice.getSubCatByIdService(id);
+        if (!subCategory)
+          return res
+            .status(404)
+            .json({ msg: "Error while a fetching the sub cat" });
         return res.status(200).json(subCategory);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -142,6 +169,10 @@ const api = (app: Application) => {
           id,
           req.body
         );
+        if (!updatedSubCategory)
+          return res
+            .status(404)
+            .json({ msg: "Error while a updating the sub cat" });
         return res.status(201).json(updatedSubCategory);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -167,6 +198,10 @@ const api = (app: Application) => {
     async (req: Request<{}, {}, CreateProductType["body"]>, res: Response) => {
       try {
         const newProduct = await Pservice.createProductService(req.body);
+        if (!newProduct)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new product" });
         return res.status(201).json(newProduct);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -176,6 +211,10 @@ const api = (app: Application) => {
   app.get("/product", async (req: Request, res: Response) => {
     try {
       const products = await Pservice.getProductsService();
+      if (!products)
+        return res
+          .status(404)
+          .json({ msg: "Error while fetching all products" });
       return res.status(200).json(products);
     } catch (error: any) {
       log.error({ err: error.message });
@@ -187,6 +226,10 @@ const api = (app: Application) => {
       try {
         const id = parseInt(req.params._id);
         const product = await Pservice.getProductByIdService(id);
+        if (!product)
+          return res
+            .status(404)
+            .json({ msg: "Error while fetching a product" });
         return res.status(200).json(product);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -202,6 +245,11 @@ const api = (app: Application) => {
           id,
           req.body
         );
+
+        if (!updatedProduct)
+          return res
+            .status(404)
+            .json({ msg: "Error while updating a product" });
         return res.status(201).json(updatedProduct);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -227,6 +275,10 @@ const api = (app: Application) => {
     async (req: Request<{}, {}, CreateReviewType["body"]>, res: Response) => {
       try {
         const newFeedback = await Fservice.createFeedbacksService(req.body);
+        if (!newFeedback)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new feeds" });
         return res.status(201).json(newFeedback);
       } catch (error: any) {
         log.error({ err: error.message });
@@ -236,6 +288,8 @@ const api = (app: Application) => {
   app.get("/feedback", async (req: Request, res: Response) => {
     try {
       const feedbacks = await Fservice.getFeedbackssService();
+      if (!feedbacks)
+        return res.status(404).json({ msg: "Error while fetching all feeds" });
       return res.status(200).json(feedbacks);
     } catch (error: any) {
       log.error({ err: error.message });
@@ -246,8 +300,10 @@ const api = (app: Application) => {
     async (req: Request<ReadReviewType["params"]>, res: Response) => {
       try {
         const id = parseInt(req.params._id);
-        const product = await Fservice.getFeedbacksByIdService(id);
-        return res.status(200).json(product);
+        const feedback = await Fservice.getFeedbacksByIdService(id);
+        if (!feedback)
+          return res.status(404).json({ msg: "Error while fetching a feeds" });
+        return res.status(200).json(feedback);
       } catch (error: any) {
         log.error({ err: error.message });
       }
@@ -262,6 +318,8 @@ const api = (app: Application) => {
           id,
           req.body
         );
+        if (!updatedFeedback)
+          return res.status(404).json({ msg: "Error while updating a feed" });
         return res.status(201).json(updatedFeedback);
       } catch (error: any) {
         log.error({ err: error.message });

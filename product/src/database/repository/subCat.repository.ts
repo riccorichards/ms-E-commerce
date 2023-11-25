@@ -12,14 +12,18 @@ class subCatRepo {
   }
   async getSubCats() {
     try {
-      return await initialize.SubCat.findAll();
+      return await initialize.SubCat.findAll({
+        include: [{ model: initialize.Product, as: "Products" }],
+      });
     } catch (error: any) {
       log.error({ err: error.message });
     }
   }
   async getSubCatById(id: number) {
     try {
-      return await initialize.SubCat.findByPk(id);
+      return await initialize.SubCat.findByPk(id, {
+        include: [{ model: initialize.Product, as: "Products" }],
+      });
     } catch (error: any) {
       log.error({ err: error.message });
     }

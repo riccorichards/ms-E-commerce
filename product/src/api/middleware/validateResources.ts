@@ -13,6 +13,6 @@ export const validateIncomingData =
       next();
     } catch (error: any) {
       log.error(error.message);
-      return res.status(400).json(error.errors); // errors is an object from zod where store errors with msg
+      return res.status(400).json(error.errors);
     }
   };

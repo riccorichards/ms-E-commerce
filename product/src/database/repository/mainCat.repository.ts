@@ -13,14 +13,18 @@ class MainCatRepo {
   }
   async getMainCats() {
     try {
-      return await initialize.MainCat.findAll();
+      return await initialize.MainCat.findAll({
+        include: [{ model: initialize.SubCat, as: "subCategories" }],
+      });
     } catch (error: any) {
       log.error({ err: error.message });
     }
   }
   async getMainCatById(id: number) {
     try {
-      return await initialize.MainCat.findByPk(id);
+      return await initialize.MainCat.findByPk(id, {
+        include: [{ model: initialize.SubCat, as: "subCategories" }],
+      });
     } catch (error: any) {
       log.error({ err: error.message });
     }
