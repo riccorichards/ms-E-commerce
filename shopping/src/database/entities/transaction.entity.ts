@@ -1,4 +1,4 @@
-import { IsDate, IsString } from "class-validator";
+import { IsString } from "class-validator";
 import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import Payment from "./payment.entity";
 
@@ -7,7 +7,7 @@ class Transaction {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   @IsString()
   total_amount: string;
 

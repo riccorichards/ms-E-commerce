@@ -20,13 +20,16 @@ class Payment {
   payment_method: string;
 
   @OneToOne(() => Transaction, { cascade: true })
-  @JoinColumn()
+  @JoinColumn({
+    name: "transaction_id",
+  })
   transaction: Transaction;
 
   @OneToOne(() => Order, { cascade: true })
-  @JoinColumn()
+  @JoinColumn({
+    name: "order_id",
+  })
   order: Order;
-
 }
 
 export default Payment;

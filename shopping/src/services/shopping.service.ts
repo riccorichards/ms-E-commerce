@@ -56,9 +56,15 @@ class ShoppingService {
     }
   }
 
-  async CreateTransactionService(transactioInput: TransactionInputValidation) {
+  async CreateTransactionService(
+    orderId: number,
+    transactioInput: TransactionInputValidation
+  ) {
     try {
-      return await this.shoppingRepo.CreateTransactionRepo(transactioInput);
+      return await this.shoppingRepo.CreateTransactionRepo(
+        orderId,
+        transactioInput
+      );
     } catch (error: any) {
       log.error(error.message);
     }

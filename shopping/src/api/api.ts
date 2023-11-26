@@ -12,6 +12,7 @@ import { validate } from "class-validator";
 import ShoppingService from "../services/shopping.service";
 import ShoppingRepo from "../database/repository/shopping.repository";
 import initialiazeRepo from "../database/repository/initialiaze.repo";
+import { verifyJWT } from "./verifyToken";
 
 const api = (app: Application) => {
   const shoppingRepo = new ShoppingRepo(
@@ -25,6 +26,8 @@ const api = (app: Application) => {
 
   const service = new ShoppingService(shoppingRepo);
 
+  app.use(verifyJWT);
+
   app.post(
     "/order",
     async (req: Request<{}, {}, OrderInputValidation>, res: Response) => {
@@ -36,7 +39,12 @@ const api = (app: Application) => {
             .join(", ");
           throw new Error(message);
         }
+
         const newOrder = await service.CreateOrderService(req.body);
+        if (!newOrder)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new order" });
         return res.status(201).json(newOrder);
       } catch (error: any) {
         log.error(error.message);
@@ -69,6 +77,10 @@ const api = (app: Application) => {
           id,
           req.body
         );
+        if (!orderWithItems)
+          return res
+            .status(404)
+            .json({ msg: "Error while adding an items is the order" });
         return res.status(201).json(orderWithItems);
       } catch (error: any) {
         log.error(error.message);
@@ -88,6 +100,11 @@ const api = (app: Application) => {
           throw new Error(message);
         }
         const newShipping = await service.CreateShippingService(req.body);
+
+        if (!newShipping)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new shipping" });
         return res.status(201).json(newShipping);
       } catch (error: any) {
         log.error(error.message);
@@ -110,10 +127,15 @@ const api = (app: Application) => {
             .join(", ");
           throw new Error(message);
         }
+
         const shippingWithAddress = await service.CreateAddressService(
           id,
           req.body
         );
+        if (!shippingWithAddress)
+          return res
+            .status(404)
+            .json({ msg: "Error while adding an address into shipping" });
         return res.status(201).json(shippingWithAddress);
       } catch (error: any) {
         log.error(error.message);
@@ -122,9 +144,13 @@ const api = (app: Application) => {
   );
 
   app.post(
-    "/transaction",
-    async (req: Request<{}, {}, TransactionInputValidation>, res: Response) => {
+    "/transaction/:id",
+    async (
+      req: Request<{ id: string }, {}, TransactionInputValidation>,
+      res: Response
+    ) => {
       try {
+        const orderId = parseInt(req.params.id);
         const errors = (await validate(req.body)) as any;
         if (errors.length > 0) {
           const message = errors
@@ -132,7 +158,14 @@ const api = (app: Application) => {
             .join(", ");
           throw new Error(message);
         }
-        const newTransaction = await service.CreateTransactionService(req.body);
+        const newTransaction = await service.CreateTransactionService(
+          orderId,
+          req.body
+        );
+        if (!newTransaction)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new transaction" });
         return res.status(201).json(newTransaction);
       } catch (error: any) {
         log.error(error.message);
@@ -152,6 +185,10 @@ const api = (app: Application) => {
           throw new Error(message);
         }
         const newPayment = await service.CreatePayloadService(req.body);
+        if (!newPayment)
+          return res
+            .status(404)
+            .json({ msg: "Error whilee creating a new payment" });
         return res.status(201).json(newPayment);
       } catch (error: any) {
         log.error(error.message);
@@ -159,14 +196,28 @@ const api = (app: Application) => {
     }
   );
 
-  app.get("/payment", async (req: Request, res: Response) => {
-    try {
-      const payments = await service.GetAllPaymentsService();
-      return res.status(200).json(payments);
-    } catch (error: any) {
-      log.error(error.message);
+  app.get(
+    "/payment",
+    async (req: Request<{}, {}, PaymentInputValidation>, res: Response) => {
+      try {
+        const errors = (await validate(req.body)) as any;
+        if (errors.length > 0) {
+          const message = errors
+            .map((error: any) => Object.values(error.constraints))
+            .join(", ");
+          throw new Error(message);
+        }
+        const payments = await service.GetAllPaymentsService();
+        if (!payments)
+          return res
+            .status(404)
+            .json({ msg: "Error while creating a new payments" });
+        return res.status(200).json(payments);
+      } catch (error: any) {
+        log.error(error.message);
+      }
     }
-  });
+  );
 
   app.get(
     "/payment/:id",

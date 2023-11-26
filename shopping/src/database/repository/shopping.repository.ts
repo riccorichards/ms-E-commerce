@@ -49,16 +49,17 @@ class ShoppingRepo {
       if (!order) {
         throw new Error("Order not found");
       }
-
+      let total = 0;
       for (const item of orderItem) {
+        total += parseFloat(item.price) * item.qty;
         const orderItem = this.orderItemRepository.create({
           ...item,
-          order: order,
+          order: { id: orderId },
         });
         await this.orderItemRepository.save(orderItem);
         order.orderItem.push(orderItem);
+        order.total_amount = `$ ${total.toFixed(2)}`;
       }
-      log.info({ order });
       await this.orderRepository.save(order);
 
       return order;
@@ -83,16 +84,18 @@ class ShoppingRepo {
     addressInput: AddressInputValidation
   ) {
     try {
-      const shipping = await this.shippingRepository.findOneBy({
-        id: shippingId,
+      const shipping = await this.shippingRepository.findOne({
+        where: { id: shippingId },
+        relations: ["address"],
       });
 
       if (!shipping) {
         throw new Error("Shipping not Found");
       }
+
       const newAddress = this.addressRepository.create({
         ...addressInput,
-        shipping: shipping,
+        shipping: { id: shippingId },
       });
 
       await this.addressRepository.save(newAddress);
@@ -107,9 +110,16 @@ class ShoppingRepo {
     }
   }
 
-  async CreateTransactionRepo(transactionInput: TransactionInputValidation) {
+  async CreateTransactionRepo(
+    orderId: number,
+    transactionInput: TransactionInputValidation
+  ) {
     try {
-      const newTnx = this.transactionRepository.create(transactionInput);
+      const order = await this.orderRepository.findOneBy({ id: orderId });
+      const newTnx = this.transactionRepository.create({
+        ...transactionInput,
+        total_amount: order?.total_amount,
+      });
       await this.transactionRepository.save(newTnx);
 
       return newTnx;
@@ -120,8 +130,9 @@ class ShoppingRepo {
 
   async CreatePaymentRepo(paymentInput: PaymentInputValidation) {
     try {
-      const order = await this.orderItemRepository.findOneBy({
-        id: paymentInput.orderId,
+      const order = await this.orderRepository.findOne({
+        where: { id: paymentInput.orderId },
+        relations: ["orderItem"],
       });
       const transaction = await this.transactionRepository.findOneBy({
         id: paymentInput.transactionId,
@@ -149,7 +160,7 @@ class ShoppingRepo {
   async ReturnAllPayments() {
     try {
       return await this.paymentRepository.find({
-        relations: ["order", "transaciton"],
+        relations: ["order", "transaction"],
       });
     } catch (error: any) {
       log.error(error.message);
@@ -166,6 +177,7 @@ class ShoppingRepo {
       log.error(error.message);
     }
   }
+  
 }
 
 export default ShoppingRepo;

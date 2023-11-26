@@ -1,5 +1,11 @@
 import { IsDate, IsString, Length } from "class-validator";
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 import Shipping from "./shipping.entity";
 
 @Entity("address")
@@ -34,7 +40,6 @@ class Address {
 
   @OneToOne(() => Shipping, (shipping) => shipping.address)
   shipping: Shipping;
-
 }
 
 export default Address;

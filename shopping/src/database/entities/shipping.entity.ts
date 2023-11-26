@@ -40,9 +40,10 @@ class Shipping {
   mark: string;
 
   @OneToOne(() => Address, { cascade: true })
-  @JoinColumn()
+  @JoinColumn({
+    name: "address_id",
+  })
   address: Address;
-
 }
 
 export default Shipping;
