@@ -15,8 +15,6 @@ import { OrderInput } from "../types/types.order";
 import { ReviewInput } from "../types/types.productReview";
 import SessionModel from "../models/session.model";
 import { omit } from "lodash";
-import { FilterQuery, QueryOptions, UpdateQuery } from "mongoose";
-import SessionDocument from "../types/types.session";
 
 class CustomerRepo {
   async CreateCustomer(input: UserInput) {
