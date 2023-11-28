@@ -40,6 +40,7 @@ const api = (app: Application) => {
         { user: session.user, session: session._id },
         { expiresIn: config.accessRefreshTtl }
       );
+      
       res.cookie("accessToken", accessToken, {
         maxAge: 3.154e10,
         httpOnly: true,

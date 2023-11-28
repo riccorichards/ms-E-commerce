@@ -10,5 +10,8 @@
 /vendor/node_modules
 /vendor/.env
 
+/deliveryman/node_modules
+/deliveryman/.env
+
 /gateway/node_modules
 /gateway/.env

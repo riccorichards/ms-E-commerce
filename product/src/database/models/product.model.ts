@@ -12,7 +12,7 @@ class Product
   public image!: string;
   public discount!: string;
   public subCatId!: number;
-  public readonly createdAt!: Date;
+  public createdAt!: Date;
 }
 
 export const ProductModel = (sequelize: Sequelize) => {
