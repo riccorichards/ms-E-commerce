@@ -13,5 +13,8 @@
 /deliveryman/node_modules
 /deliveryman/.env
 
+/feedback/node_modules
+/feedback/.env
+
 /gateway/node_modules
 /gateway/.env

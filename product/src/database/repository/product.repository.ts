@@ -12,6 +12,7 @@ class ProductRepo {
       });
     }
   }
+
   async getProducts() {
     try {
       return await initialize.Product.findAll({
@@ -23,6 +24,7 @@ class ProductRepo {
       });
     }
   }
+
   async getProductById(id: number) {
     try {
       return await initialize.Product.findByPk(id, {
@@ -34,12 +36,13 @@ class ProductRepo {
       });
     }
   }
+
   async updateProduct(id: number, input: ProductDocsType) {
     try {
-      const [updatedFeeds] = await initialize.Product.update(input, {
+      const [updatedProduct] = await initialize.Product.update(input, {
         where: { id },
       });
-      if (updatedFeeds === 0) return log.error({ err: "No changes in rows" });
+      if (updatedProduct === 0) return log.error({ err: "No changes in rows" });
       return await initialize.Product.findByPk(id);
     } catch (error: any) {
       log.error({
@@ -47,6 +50,7 @@ class ProductRepo {
       });
     }
   }
+
   async deleteProduct(id: number) {
     try {
       return await initialize.Product.destroy({ where: { id } });

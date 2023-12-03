@@ -10,6 +10,7 @@ const dbPassword = config.dbPassword!;
 export const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
   host: config.dbHost,
   dialect: config.dbDialect as any,
+  logging: false,
 });
 
 export const connectToMySQL = async () => {

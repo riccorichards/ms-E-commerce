@@ -18,8 +18,12 @@ import {
   CreateTeamMemberSchemaType,
   UpdateTeamMemberSchemaType,
 } from "../database/validation/team.validation";
-const api = (app: Application) => {
+import { Channel } from "amqplib";
+import { SubscribeMessage } from "../utils/rabbitMQ.utils";
+const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
+
+  SubscribeMessage(channel, config.vendor_queue, config.vendor_binding_key);
 
   //register
   app.post("/register", async (req: Request, res: Response) => {
@@ -75,6 +79,47 @@ const api = (app: Application) => {
       return res.status(400).json({ err: error.message });
     }
   });
+
+  //find specific vendor
+  app.get(
+    "/find-vendor/:vendorId",
+    async (req: Request<ReadVendorSchemaType["params"]>, res: Response) => {
+      try {
+        const { vendorId } = req.params;
+        const vendor = await service.FindVendor(vendorId);
+        if (!vendor)
+          return res.status(404).json({ err: "Error with fetching vendor" });
+
+        return res.status(201).json(vendor);
+      } catch (error: any) {
+        log.error({ err: error.message });
+      }
+    }
+  );
+
+  //get vendor's data
+  app.get(
+    "/vendor-spec-data/:vendorId",
+    async (req: Request<ReadVendorSchemaType["params"]>, res: Response) => {
+      try {
+        const { vendorId } = req.params;
+        const field = Array.isArray(req.query.field)
+          ? (req.query.field[0] as string)
+          : (req.query.field as string);
+
+        if (!field) return res.status(400).json({ msg: "Bad request" });
+
+        const vendor = await service.VendorData(vendorId, field);
+
+        if (vendor === null)
+          return res.status(404).json({ err: "Vendor not found" });
+
+        return res.status(200).json(vendor);
+      } catch (error: any) {
+        log.error({ err: error.message });
+      }
+    }
+  );
 
   //validate requests and creating a new token if it is necessary
   app.use([deserializeUser, requestUser]);
@@ -148,47 +193,6 @@ const api = (app: Application) => {
         if (!updatedAddress)
           return res.status(404).json({ err: "Error with updating process" });
         return res.status(201).json(updatedAddress);
-      } catch (error: any) {
-        log.error({ err: error.message });
-      }
-    }
-  );
-
-  //find specific vendor
-  app.get(
-    "/find-vendor/:vendorId",
-    async (req: Request<ReadVendorSchemaType["params"]>, res: Response) => {
-      try {
-        const { vendorId } = req.params;
-        const vendor = await service.FindVendor(vendorId);
-        if (!vendor)
-          return res.status(404).json({ err: "Error with fetching vendor" });
-
-        return res.status(201).json(vendor);
-      } catch (error: any) {
-        log.error({ err: error.message });
-      }
-    }
-  );
-
-  //get vendor's data
-  app.get(
-    "/vendor-spec-data/:vendorId",
-    async (req: Request<ReadVendorSchemaType["params"]>, res: Response) => {
-      try {
-        const { vendorId } = req.params;
-        const field = Array.isArray(req.query.field)
-          ? (req.query.field[0] as string)
-          : (req.query.field as string);
-
-        if (!field) return res.status(400).json({ msg: "Bad request" });
-
-        const vendor = await service.VendorData(vendorId, field);
-
-        if (vendor === null)
-          return res.status(404).json({ err: "Vendor not found" });
-
-        return res.status(200).json(vendor);
       } catch (error: any) {
         log.error({ err: error.message });
       }

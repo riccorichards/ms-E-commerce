@@ -4,22 +4,25 @@ import { Request, Response } from "express";
 import log from "../utils/logger";
 import MainCatService from "../services/mainCategory.services";
 import SubCatService from "../services/subCategory.services";
-import FeedbacksService from "../services/productReview.services";
 import { verifyJWT } from "./middleware/verifyToken";
 import { ZodError } from "zod";
 import { IncomingMainCatValidation } from "./middleware/validation/mainCategory.validation";
 import { IncomingSubCatValidation } from "./middleware/validation/subCategory.validation";
 import { IncomingProductValidation } from "./middleware/validation/product.validation";
-import { IncomingReviewValidation } from "./middleware/validation/feedbacks.validation";
+import { PublishMessage, SubscriberMessage } from "../utils/rabbitMQ.utils";
+import config from "../../config";
+import { Channel } from "amqplib";
 
-const api = (app: Application) => {
+const api = async (app: Application, channel: Channel) => {
   const Mservice = new MainCatService();
   const Sservice = new SubCatService();
   const Pservice = new ProductService();
-  const Fservice = new FeedbacksService();
+
+  SubscriberMessage(channel, config.product_queue, config.product_binding_key);
 
   app.use(verifyJWT);
   //main category
+
   app.post("/main-cat", async (req: Request, res: Response) => {
     try {
       IncomingMainCatValidation.parse(req.body);
@@ -248,74 +251,73 @@ const api = (app: Application) => {
     }
   });
 
-  //feedbacks
-  app.post("/feedback", async (req: Request, res: Response) => {
+  app.post("/add-product-to-wishlist", async (req: Request, res: Response) => {
     try {
-      IncomingReviewValidation.parse(req.body);
-      const newFeedback = await Fservice.createFeedbacksService(req.body);
-      if (!newFeedback)
-        return res
-          .status(404)
-          .json({ msg: "Error while creating a new feeds" });
-      return res.status(201).json(newFeedback);
-    } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(404).json(error.errors);
+      const { productId, userId } = req.body;
+      const product = await Pservice.getProductByIdService(productId);
+      if (!product) return res.status(404).json({ msg: "Not found product" });
+
+      const { id, image, title, price, desc } = product;
+      const event = {
+        type: "add_product_to_wishlist",
+        data: {
+          id,
+          userId,
+          title,
+          desc,
+          image,
+          price,
+        },
+      };
+      if (channel) {
+        PublishMessage(
+          channel,
+          config.customer_binding_key,
+          JSON.stringify(event)
+        );
+        return res.status(201).json({ msg: "Successfully added..." });
+      } else {
+        return res.status(503).json({ msg: "Service Unavailable" });
       }
-      log.error({ err: error.message });
-      return res.status(500).json(error.message);
+    } catch (error: any) {
+      log.error(error.Message);
+      return res.status(500).json({ msg: "Internal Server Error" });
     }
   });
 
-  app.get("/feedback", async (req: Request, res: Response) => {
+  app.post("/add-product-to-cart", async (req: Request, res: Response) => {
     try {
-      const feedbacks = await Fservice.getFeedbackssService();
-      if (!feedbacks)
-        return res.status(404).json({ msg: "Error while fetching all feeds" });
-      return res.status(200).json(feedbacks);
-    } catch (error: any) {
-      log.error({ err: error.message });
-      return res.status(500).json(error.message);
-    }
-  });
-  app.get("/feedback/:_id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params._id);
-      const feedback = await Fservice.getFeedbacksByIdService(id);
-      if (!feedback)
-        return res.status(404).json({ msg: "Error while fetching a feeds" });
-      return res.status(200).json(feedback);
-    } catch (error: any) {
-      log.error({ err: error.message });
-      return res.status(500).json(error.message);
-    }
-  });
-  app.put("/feedback/:_id", async (req: Request, res: Response) => {
-    try {
-      IncomingReviewValidation.parse(req.body);
-      const id = parseInt(req.params._id);
-      const updatedFeedback = await Fservice.updateFeedbacksService(
-        id,
-        req.body
-      );
-      if (!updatedFeedback)
-        return res.status(404).json({ msg: "Error while updating a feed" });
-      return res.status(201).json(updatedFeedback);
-    } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(404).json(error.errors);
+      const { productId, userId, unit } = req.body;
+      const product = await Pservice.getProductByIdService(productId);
+      if (!product) return res.status(404).json({ msg: "Not found product" });
+
+      const { id, image, title, price, desc } = product;
+      const event = {
+        type: "add_product_to_cart",
+        data: {
+          id,
+          userId,
+          title,
+          desc,
+          image,
+          price,
+          unit,
+        },
+      };
+
+      if (channel) {
+        PublishMessage(
+          channel,
+          config.customer_binding_key,
+          JSON.stringify(event)
+        );
+        return res.status(201).json({ msg: "Successfully added..." });
+      } else {
+        return res.status(503).json({ msg: "Service Unavailable" });
       }
-      log.error({ err: error.message });
-      return res.status(500).json(error.message);
-    }
-  });
-  app.delete("/feedback/:_id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params._id);
-      await Fservice.deleteFeedbacksService(id);
-      return res.status(201).json({ msg: "Successfully removed..." });
     } catch (error: any) {
-      log.error({ err: error.message });
+      log.error(error.Message);
+      return res.status(500).json({ msg: "Internal Server Error" });
     }
   });
 };

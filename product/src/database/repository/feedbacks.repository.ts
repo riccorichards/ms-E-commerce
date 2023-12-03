@@ -1,15 +1,16 @@
 import log from "../../utils/logger";
 import initialize from "../initialize";
-import { FeedbacksInputType } from "../types/types.feedbacks";
+import { FeedbackMessageType } from "../types/types.feedbacks";
 
 class FeedbacksRepo {
-  async createFeedback(input: FeedbacksInputType) {
+  async createFeedback(input: FeedbackMessageType) {
     try {
       return await initialize.Feedbacks.create(input);
     } catch (error: any) {
       log.error({ err: error.message });
     }
   }
+
   async getFeedbacks() {
     try {
       return await initialize.Feedbacks.findAll();
@@ -17,15 +18,10 @@ class FeedbacksRepo {
       log.error({ err: error.message });
     }
   }
-  async getFeedbackById(id: number) {
+
+  async updateFeedback(input: FeedbackMessageType) {
     try {
-      return await initialize.Feedbacks.findByPk(id);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-  async updateFeedback(id: number, input: FeedbacksInputType) {
-    try {
+      const id = input.feedId;
       const [updatedFeeds] = await initialize.Feedbacks.update(input, {
         where: { id },
       });
@@ -35,6 +31,7 @@ class FeedbacksRepo {
       log.error({ err: error.message });
     }
   }
+
   async deleteFeedback(id: number) {
     try {
       return await initialize.Feedbacks.destroy({ where: { id } });

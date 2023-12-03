@@ -1,23 +1,26 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
 import {
+  FeedbackMessageType,
   FeedbacksDocsType,
-  FeedbacksInputType,
 } from "../types/types.feedbacks";
 
-class feedbacks
-  extends Model<FeedbacksDocsType, FeedbacksInputType>
+class Feedbacks
+  extends Model<FeedbacksDocsType, FeedbackMessageType>
   implements FeedbacksDocsType
 {
   public id!: number;
   public author!: string;
-  public deliveryId!: number;
-  public profileImg!: string;
+  public profileImg?: string;
+  public to!: string;
+  public targetId!: number;
+  public feedId!: number;
   public review!: string;
   public rating!: number;
+  public createdAt?: Date;
 }
 
 export const FeedbacksModal = (sequelize: Sequelize) => {
-  feedbacks.init(
+  Feedbacks.init(
     {
       id: {
         type: DataTypes.INTEGER,
@@ -27,11 +30,14 @@ export const FeedbacksModal = (sequelize: Sequelize) => {
       },
       author: { type: DataTypes.STRING, allowNull: false },
       profileImg: { type: DataTypes.STRING, allowNull: true },
-      deliveryId: { type: DataTypes.INTEGER, allowNull: false },
+      targetId: { type: DataTypes.INTEGER, allowNull: false },
+      feedId: { type: DataTypes.INTEGER, allowNull: false },
+      to: { type: DataTypes.STRING, allowNull: false },
       review: { type: DataTypes.STRING, allowNull: true },
       rating: { type: DataTypes.INTEGER, allowNull: true },
+      createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     },
-    { sequelize, modelName: "feedbacks", timestamps: true }
+    { sequelize, modelName: "Feedbacks", timestamps: true }
   );
-  return feedbacks;
+  return Feedbacks;
 };

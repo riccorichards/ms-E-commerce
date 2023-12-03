@@ -1,4 +1,4 @@
-import { IsDate, IsString, Length } from "class-validator";
+import { IsString, Length } from "class-validator";
 import {
   Column,
   Entity,
@@ -8,8 +8,10 @@ import {
 } from "typeorm";
 import Transaction from "./transaction.entity";
 import Order from "./order.entity";
+import Shipping from "./shipping.entity";
 
 @Entity("payment")
+  
 class Payment {
   @PrimaryGeneratedColumn()
   id: number;
@@ -30,6 +32,12 @@ class Payment {
     name: "order_id",
   })
   order: Order;
+
+  @OneToOne(() => Shipping, { cascade: true })
+  @JoinColumn({
+    name: "shipping_id",
+  })
+  shipping: Shipping;
 }
 
 export default Payment;

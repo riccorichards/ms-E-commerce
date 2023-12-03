@@ -1,7 +1,8 @@
-export interface WishlistType {
-  _id: string;
-  name: string;
-  description: string;
+export interface WishlistMessageType {
+  id: string;
+  userId: string;
+  title: string;
+  desc: string;
   image: string;
   price: string;
 }

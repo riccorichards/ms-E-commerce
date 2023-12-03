@@ -9,45 +9,43 @@ const UserSchema = new mongoose.Schema(
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    balance: { type: Number, required: true },
-    debit_card: { type: String, required: true },
     bonus: { type: Number, default: 0 },
+    bank: { type: mongoose.Schema.Types.ObjectId, ref: "Bank" },
     address: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Address",
     },
     wishlist: [
       {
-        _id: { type: String, required: true },
-        name: { type: String },
-        description: { type: String },
+        id: { type: Number, required: true },
+        title: { type: String },
+        desc: { type: String },
         image: { type: String },
         price: { type: String },
       },
     ],
     cart: [
       {
-        product: {
-          _id: { type: String, required: true },
-          name: { type: String },
-          description: { type: String },
-          image: { type: String },
-          price: { type: String },
-        },
+        id: { type: Number, required: true },
+        name: { type: String },
+        description: { type: String },
+        image: { type: String },
+        price: { type: String },
         unit: { type: Number, required: true },
       },
     ],
     order: [
       {
-        orderId: { type: Number },
-        amount: { type: String },
+        type: mongoose.Schema.ObjectId,
+        ref: "order",
       },
     ],
-    review: [
+    feedback: [
       {
-        productId: Number,
-        review: { type: String, default: "" },
-        rating: { type: Number, default: null },
+        feedId: { type: Number },
+        to: { type: String },
+        review: { type: String },
+        rating: { type: Number },
       },
     ],
   },

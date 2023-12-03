@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { WishlistType } from "./type.wishlist";
-import { CartType } from "./type.cart";
-import { ReviewInput } from "./types.productReview";
+import { WishlistMessageType } from "./type.wishlist";
+import { CartMessageType } from "./type.cart";
+import { FeedbackMessageType } from "./types.feedback";
 import { OrderInput } from "./types.order";
 
 // medel for mongodb... schema's part which could recevied from the client side
@@ -9,13 +9,12 @@ export interface UserInput {
   username: string;
   email: string;
   password: string;
-  balance: string;
-  debit_card: number;
   bonus: number;
   address: mongoose.Schema.Types.ObjectId;
-  wishlist: WishlistType[];
-  review: ReviewInput[];
-  cart: CartType[];
+  bank: mongoose.Schema.Types.ObjectId;
+  wishlist: WishlistMessageType[];
+  feedback: FeedbackMessageType[];
+  cart: CartMessageType[];
   order: OrderInput[];
 }
 
@@ -62,4 +61,26 @@ export interface UpdateAddressInput {
   street: string;
   city: string;
   country: string;
+}
+
+//bank account input type
+export interface BankAccountType {
+  userId: string;
+  balance: string;
+  debit_card: number;
+  bankOf: string;
+}
+
+//bank account document type
+export interface BankAccountDocsType
+  extends BankAccountType,
+    mongoose.Document {
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateBankAccountType {
+  balance: string;
+  debit_card: number;
+  bankOf: string;
 }

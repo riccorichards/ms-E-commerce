@@ -14,7 +14,7 @@ export const setupAssociation = () => {
 
   Products.belongsTo(Sub_Cat, { foreignKey: "subCatId" });
 
-  Products.hasMany(Feedbacks, { foreignKey: "productId", as: "feedbacks" });
+  Products.hasMany(Feedbacks, { foreignKey: "targetId", as: "feedbacks" });
 
-  Feedbacks.belongsTo(Products, { foreignKey: "productId" });
+  Feedbacks.belongsTo(Products, { foreignKey: "targetId" });
 };

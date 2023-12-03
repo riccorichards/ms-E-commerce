@@ -21,6 +21,7 @@ export interface VendorInput {
   password: string;
   workingHrs: WorkingHrsType;
   address: mongoose.Schema.Types.ObjectId;
+  feeds: mongoose.Schema.Types.ObjectId[];
   teamMember: mongoose.Schema.Types.ObjectId;
   gallery: [galleryType];
   socialMedia: [{ title: string }];

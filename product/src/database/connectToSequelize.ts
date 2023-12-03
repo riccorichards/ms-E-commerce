@@ -17,7 +17,7 @@ export const connectToMySQL = async () => {
     await sequelize.authenticate();
     log.info("Connection to the database has been established successfully.");
     setupAssociation();
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: false, logging: false });
   } catch (error: any) {
     log.error({ err: error.message });
   }

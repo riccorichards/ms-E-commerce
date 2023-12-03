@@ -36,6 +36,10 @@ class Order {
   @IsString()
   total_amount: string;
 
+  @Column({ nullable: true })
+  @IsString()
+  note: string;
+
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
   orderItem: OrderItem[];
 

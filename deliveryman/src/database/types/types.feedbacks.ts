@@ -1,11 +1,14 @@
-export interface FeedbacksInputType {
+export interface FeedbackMessageType {
   author: string;
-  profileImg: string;
-  deliveryId: number;
+  profileImg?: string;
+  to: string;
+  targetId: number;
   review: string;
   rating: number;
+  feedId: number;
 }
 
-export interface FeedbacksDocsType extends FeedbacksInputType {
+export interface FeedbacksDocsType extends FeedbackMessageType {
   id: number;
+  createdAt?: Date;
 }

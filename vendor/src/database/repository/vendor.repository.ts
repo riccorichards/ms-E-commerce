@@ -13,6 +13,9 @@ import VendorModel from "../models/vendor.model";
 import { AddressInputType } from "../types/type.address";
 import { TeamMemberType } from "../types/type.teamMember";
 import TeamModel from "../models/teamMember.model";
+import { FeedbackMessageType } from "../types/types.feedbacks";
+import FeedsModel from "../models/feedback.model";
+import mongoose from "mongoose";
 
 class VendorRepo {
   async CreateVendor(input: VendorInput) {
@@ -21,6 +24,7 @@ class VendorRepo {
         ...input,
         address: null,
         teamMember: null,
+        feeds: [],
         gallery: [],
         socialMedia: [],
       });
@@ -136,7 +140,8 @@ class VendorRepo {
     try {
       return await VendorModel.findById(id)
         .populate("address")
-        .populate("team");
+        .populate("team")
+        .populate("feeds");
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -147,6 +152,7 @@ class VendorRepo {
       return await VendorModel.find({})
         .populate("address")
         .populate("teamMember")
+        .populate("feeds")
         .lean();
     } catch (error: any) {
       log.error({ err: error.message });
@@ -169,9 +175,61 @@ class VendorRepo {
 
   async GetGallery(id: string) {
     try {
-      return await VendorModel.findById(id);
+      return await VendorModel.findById(id)
+        .populate("address")
+        .populate("teamMember")
+        .populate("feeds")
+        .lean();
     } catch (error: any) {
       throw new Error("Error while fetching vendor's gallery");
+    }
+  }
+
+  async createNewFeeds(input: FeedbackMessageType) {
+    try {
+      const newFeedback = await FeedsModel.create(input);
+      if (!newFeedback) throw new Error("Error while creating a new feeds");
+
+      const savedFeeds = await newFeedback.save();
+      const vendor = (await VendorModel.findById(
+        input.forVendor
+      )) as VendorDocument;
+      if (!vendor) throw new Error("Error while finding the vendor");
+
+      vendor.feeds.push(savedFeeds._id);
+
+      return await vendor.save();
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+  async updateFeeds(input: FeedbackMessageType) {
+    try {
+      const feedId = input.feedId;
+      const updatedFeedback = await FeedsModel.findOneAndUpdate(
+        { feedId: feedId },
+        input,
+        {
+          new: true,
+        }
+      );
+
+      return updatedFeedback;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+  async deleteFeedsFromVendor(feedId: number) {
+    try {
+      console.log({ feedId, note: "Vendor Repo" });
+
+      const removedFeed = await FeedsModel.findOneAndRemove({ feedId: feedId });
+      return removedFeed;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
     }
   }
 }

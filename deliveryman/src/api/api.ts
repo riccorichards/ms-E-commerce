@@ -14,11 +14,18 @@ import { OrderMenuValidation } from "./middleware/validation/orderMenu.validatio
 import { CustomerValidation } from "./middleware/validation/customer.validation";
 import { signWihtJWT } from "../utils/jwt.utils";
 import config from "../../config";
-import { IncomingFeedbackValidation } from "./middleware/validation/feedbacks.validation";
 import { IncomingVendorValidation } from "./middleware/validation/vendor.validation";
+import { Channel } from "amqplib";
+import { SubscribeMessage } from "../utils/rabbitMQ.utils";
 
-const api = (app: Application) => {
+const api = (app: Application, channel: Channel) => {
   const service = new DeliveryService();
+
+  SubscribeMessage(
+    channel,
+    config.deliveryman_queue,
+    config.deliveryman_binding_key
+  );
 
   app.post("/signup", async (req: Request, res: Response) => {
     try {
@@ -76,6 +83,50 @@ const api = (app: Application) => {
         return res.status(404).json(error.errors);
       }
 
+      log.error(error.message);
+      return res.status(500).json(error.message);
+    }
+  });
+
+  app.get("/deliveryman/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await service.GetDeliverymanService(id);
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error while fetching delivery person" });
+      return res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(404).json(error.errors);
+      }
+      log.error(error.message);
+      return res.status(500).json(error.message);
+    }
+  });
+
+  app.get("/deliveryman/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const field = Array.isArray(req.query.field)
+        ? (req.query.field[0] as string)
+        : (req.query.field as string);
+
+      const result = await service.GetDeliverymanWithSpecFieldService(
+        id,
+        field
+      );
+
+      if (!result)
+        return res.status(404).json({
+          err: "Error while fetching delivery person with specific field",
+        });
+      return res.status(200).json(result);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(404).json(error.errors);
+      }
       log.error(error.message);
       return res.status(500).json(error.message);
     }
@@ -161,68 +212,6 @@ const api = (app: Application) => {
       if (!result)
         return res.status(404).json({ err: "Error while adding vendor info" });
       return res.status(201).json(result);
-    } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(404).json(error.errors);
-      }
-      log.error(error.message);
-      return res.status(500).json(error.message);
-    }
-  });
-
-  app.post("/feedbacks", async (req: Request, res: Response) => {
-    try {
-      IncomingFeedbackValidation.parse(req.body);
-      const result = await service.CreateFeedbackService(req.body);
-      if (!result)
-        return res
-          .status(404)
-          .json({ err: "Error while adding a new feedback" });
-      return res.status(201).json(result);
-    } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(404).json(error.errors);
-      }
-      log.error(error.message);
-      return res.status(500).json(error.message);
-    }
-  });
-
-  app.get("/deliveryman/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const result = await service.GetDeliverymanService(id);
-      if (!result)
-        return res
-          .status(404)
-          .json({ err: "Error while fetching delivery person" });
-      return res.status(200).json(result);
-    } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(404).json(error.errors);
-      }
-      log.error(error.message);
-      return res.status(500).json(error.message);
-    }
-  });
-
-  app.get("/deliveryman/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const field = Array.isArray(req.query.field)
-        ? (req.query.field[0] as string)
-        : (req.query.field as string);
-
-      const result = await service.GetDeliverymanWithSpecFieldService(
-        id,
-        field
-      );
-
-      if (!result)
-        return res.status(404).json({
-          err: "Error while fetching delivery person with specific field",
-        });
-      return res.status(200).json(result);
     } catch (error: any) {
       if (error instanceof ZodError) {
         return res.status(404).json(error.errors);

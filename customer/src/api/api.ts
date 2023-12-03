@@ -6,8 +6,13 @@ import config from "../../config/default";
 import { omit } from "lodash";
 import { deserializeUser } from "./middleware/deserializeUser";
 import { requestUser } from "./middleware/requestUser";
-const api = (app: Application) => {
+import { Channel } from "amqplib";
+import { SubscribeMessage } from "../utils/rabbitMQ.utils";
+
+const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
+
+  SubscribeMessage(channel, config.customer_queue, config.product_binding_key);
 
   app.post("/register", async (req: Request, res: Response) => {
     try {
@@ -40,7 +45,7 @@ const api = (app: Application) => {
         { user: session.user, session: session._id },
         { expiresIn: config.accessRefreshTtl }
       );
-      
+
       res.cookie("accessToken", accessToken, {
         maxAge: 3.154e10,
         httpOnly: true,
@@ -64,26 +69,35 @@ const api = (app: Application) => {
     }
   });
 
-  app.use([deserializeUser, requestUser]);
-  
-  app.post(
-    "/address",
-    [deserializeUser, requestUser],
-    async (req: Request, res: Response) => {
-      console.log(res.locals.user, "Address");
-      try {
-        const address = await service.UserAddress(req.body);
-        if (!address)
-          return res
-            .status(404)
-            .json({ err: "Error with adding address information" });
+  app.post("/address", async (req: Request, res: Response) => {
+    try {
+      const address = await service.UserAddress(req.body);
+      if (!address)
+        return res
+          .status(404)
+          .json({ err: "Error with adding address information" });
 
-        return res.status(201).json(address);
-      } catch (error: any) {
-        log.error({ err: error.message });
-      }
+      return res.status(201).json(omit(address.toJSON(), "password"));
+    } catch (error: any) {
+      log.error({ err: error.message });
     }
-  );
+  });
+
+  app.post("/bank-acc", async (req: Request, res: Response) => {
+    try {
+      const bankDetails = await service.UserBankAcc(req.body);
+      if (!bankDetails)
+        return res
+          .status(404)
+          .json({ err: "Error with adding bankDetails information" });
+
+      return res.status(201).json(omit(bankDetails.toJSON(), "password"));
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  });
+
+  app.use([deserializeUser, requestUser]);
 
   app.put("/update-user/:userId", async (req: Request, res: Response) => {
     try {
@@ -104,6 +118,19 @@ const api = (app: Application) => {
       if (!updatedAddress)
         return res.status(404).json({ err: "Error with updating process" });
       return res.status(201).json(updatedAddress);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  });
+
+  app.put("/update-bank/:userId", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const updatedBank = await service.UpdateUserBankInfo(userId, req.body);
+
+      if (!updatedBank)
+        return res.status(404).json({ err: "Error with updating process" });
+      return res.status(201).json(updatedBank);
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -139,71 +166,68 @@ const api = (app: Application) => {
       log.error({ err: error.message });
     }
   });
+  //app.post("/user-wishlist", async (req: Request, res: Response) => {
+  //  try {
+  //    const user = res.locals.user as SessionDocument;
 
-  app.post("/user-wishlist", async (req: Request, res: Response) => {
-    try {
-      const wishlist = await service.WishlistItems(
-        "6560a0f01c56d04cef3c85f6",
-        req.body
-      );
+  //    const wishlist = await service.WishlistItems(user.user, req.body);
 
-      if (!wishlist)
-        return res.status(404).json({ err: "Error with adding wishlist item" });
+  //    if (!wishlist)
+  //      return res.status(404).json({ err: "Error with adding wishlist item" });
 
-      return res.status(201).json(wishlist);
-    } catch (error: any) {
-      log.error({ err: error.message });
-      return res.status(400).json({ err: error.message });
-    }
-  });
+  //    return res.status(201).json(wishlist);
+  //  } catch (error: any) {
+  //    log.error({ err: error.message });
+  //    return res.status(400).json({ err: error.message });
+  //  }
+  //});
 
-  app.post("/user-cart", async (req: Request, res: Response) => {
-    try {
-      const user = await service.ManageCart(
-        "6560a0f01c56d04cef3c85f6",
-        req.body
-      );
-      if (!user)
-        return res
-          .status(404)
-          .json({ err: "Error with fetching user with cart" });
-      return res.status(201).json(user);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  });
+  //app.post("/user-cart", async (req: Request, res: Response) => {
+  //  try {
+  //    const userId = res.locals.user.user;
+  //    const user = await service.ManageCart(userId, req.body);
 
-  app.post("/user-order", async (req: Request, res: Response) => {
-    try {
-      const user = await service.ManageOrder(
-        "6560a0f01c56d04cef3c85f6",
-        req.body
-      );
-      if (!user)
-        return res
-          .status(404)
-          .json({ err: "Error with servicing user with order" });
-      return res.status(201).json(user);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  });
+  //    if (!user)
+  //      return res
+  //        .status(404)
+  //        .json({ err: "Error with fetching user with cart" });
+  //    return res.status(201).json(user);
+  //  } catch (error: any) {
+  //    log.error({ err: error.message });
+  //  }
+  //});
 
-  app.post("/user-review", async (req: Request, res: Response) => {
-    try {
-      const user = await service.ManageReview(
-        "6560a0f01c56d04cef3c85f6",
-        req.body
-      );
-      if (!user)
-        return res.status(404).json({
-          err: "Error with servicing user with reviews on the products",
-        });
-      return res.status(201).json(user);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  });
+  //app.post("/user-order", async (req: Request, res: Response) => {
+  //  try {
+  //    const user = await service.ManageOrder(
+  //      "6560a0f01c56d04cef3c85f6",
+  //      req.body
+  //    );
+  //    if (!user)
+  //      return res
+  //        .status(404)
+  //        .json({ err: "Error with servicing user with order" });
+  //    return res.status(201).json(user);
+  //  } catch (error: any) {
+  //    log.error({ err: error.message });
+  //  }
+  //});
+
+  //app.post("/user-review", async (req: Request, res: Response) => {
+  //  try {
+  //    const user = await service.ManageReview(
+  //      "6560a0f01c56d04cef3c85f6",
+  //      req.body
+  //    );
+  //    if (!user)
+  //      return res.status(404).json({
+  //        err: "Error with servicing user with reviews on the products",
+  //      });
+  //    return res.status(201).json(user);
+  //  } catch (error: any) {
+  //    log.error({ err: error.message });
+  //  }
+  //});
 
   app.delete("/log_out", async (req: Request, res: Response) => {
     try {

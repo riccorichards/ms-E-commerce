@@ -11,12 +11,12 @@ export const setupAssociation = () => {
   //------------------------------delivery associations
   Delivery.hasMany(Order, { foreignKey: "deliveryId", as: "orders" });
 
-  Delivery.hasMany(Feedbacks, { foreignKey: "deliveryId", as: "feedbacks" });
+  Delivery.hasMany(Feedbacks, { foreignKey: "targetId", as: "feedbacks" });
 
   //couple of models are belong to the delivery
   Order.belongsTo(Delivery, { foreignKey: "deliveryId" });
 
-  Feedbacks.belongsTo(Delivery, { foreignKey: "deliveryId" });
+  Feedbacks.belongsTo(Delivery, { foreignKey: "targetId" });
 
   //-------------------------order associations
   Order.hasOne(Customer, { foreignKey: "orderId", as: "customer" });

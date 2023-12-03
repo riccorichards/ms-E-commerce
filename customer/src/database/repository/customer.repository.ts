@@ -2,28 +2,34 @@ import AddressModel from "../models/address.model";
 import UserModel from "../models/user.model";
 import {
   AddressInputType,
+  BankAccountType,
   LoginInputType,
   UpdateAddressInput,
+  UpdateBankAccountType,
   UpdateUserInput,
   UserDocument,
   UserInput,
 } from "../types/types.customer";
 import log from "../../utils/logger";
-import { WishlistType } from "../types/type.wishlist";
-import { CartType } from "../types/type.cart";
-import { OrderInput } from "../types/types.order";
-import { ReviewInput } from "../types/types.productReview";
+import { WishlistMessageType } from "../types/type.wishlist";
+import { CartMessageType } from "../types/type.cart";
+import { OrderMessageType } from "../types/types.order";
+import { FeedbackMessageType } from "../types/types.feedback";
 import SessionModel from "../models/session.model";
 import { omit } from "lodash";
+import BankModel from "../models/bank.model";
 
 class CustomerRepo {
+
   async CreateCustomer(input: UserInput) {
     try {
       const newCustomer = await UserModel.create({
         ...input,
         bonus: 0,
         address: null,
+        bank: null,
         wishlist: [],
+        feedback: [],
         cart: [],
         order: [],
       });
@@ -31,6 +37,7 @@ class CustomerRepo {
       return newCustomer;
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
 
@@ -56,6 +63,7 @@ class CustomerRepo {
       return newSession;
     } catch (error: any) {
       throw new Error(error.message);
+      throw error;
     }
   }
 
@@ -63,7 +71,6 @@ class CustomerRepo {
     try {
       const { userId, street, postalCode, city, country } = input;
       const user = (await UserModel.findById(userId)) as UserDocument;
-
       const newAddress = await AddressModel.create({
         userId,
         street,
@@ -81,6 +88,32 @@ class CustomerRepo {
       return await user.save();
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
+    }
+  }
+
+  async BankAcc(input: BankAccountType) {
+    try {
+      const { userId, balance, debit_card, bankOf } = input;
+      const user = (await UserModel.findById(userId)) as UserDocument;
+
+      const newBankAccount = await BankModel.create({
+        userId,
+        balance,
+        debit_card,
+        bankOf,
+      });
+
+      if (!newBankAccount) return false;
+
+      const savedAddress = await newBankAccount.save();
+
+      user.bank = omit(savedAddress.toJSON(), "userId")._id;
+
+      return await user.save();
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
     }
   }
 
@@ -89,6 +122,22 @@ class CustomerRepo {
       return await UserModel.findByIdAndUpdate(query, input, { new: true });
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
+    }
+  }
+
+  async UpdateCustomerBankAcc(query: string, input: UpdateBankAccountType) {
+    try {
+      const profile = await UserModel.findById(query);
+      const updatedBankAcc = await BankModel.findByIdAndUpdate(
+        profile?.bank,
+        input,
+        { new: true }
+      );
+      if (!updatedBankAcc) throw new Error("Error while update bank info");
+      return updatedBankAcc;
+    } catch (error: any) {
+      throw new Error(error.message);
     }
   }
 
@@ -104,14 +153,16 @@ class CustomerRepo {
       return updatedAddress;
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
 
   async FindCustomer(id: string) {
     try {
-      return await UserModel.findById(id).populate("address");
+      return await UserModel.findById(id).populate("address").populate("bank");
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
 
@@ -129,8 +180,8 @@ class CustomerRepo {
           return customer.cart;
         case "order":
           return customer.order;
-        case "review":
-          return customer.review;
+        case "feedback":
+          return customer.feedback;
         case "wishlist":
           return customer.wishlist;
         default:
@@ -138,21 +189,22 @@ class CustomerRepo {
       }
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
 
-  async AddWishlistItem(id: string, input: WishlistType) {
+  async AddWishlistItem(input: WishlistMessageType) {
     try {
-      const profile = await UserModel.findById(id).populate("wishlist");
+      const { userId } = input;
+      const profile = await UserModel.findById(userId).populate("wishlist");
 
-      if (!profile) return false;
+      if (!profile) throw new Error("Error with find user");
 
-      const wishlist = profile.wishlist as WishlistType[];
+      const wishlist = profile.wishlist as WishlistMessageType[];
 
-      const isExist = wishlist.some((item) => item._id === input._id);
-
+      const isExist = wishlist.some((item) => item.id === input.id);
       if (isExist) {
-        const index = wishlist.findIndex((item) => item._id === input._id);
+        const index = wishlist.findIndex((item) => item.id === input.id);
         wishlist.splice(index, 1);
       } else {
         wishlist.push(input);
@@ -166,25 +218,23 @@ class CustomerRepo {
     }
   }
 
-  async AddCartItem(id: string, input: CartType) {
+  async AddCartItem(input: CartMessageType) {
     try {
-      const profile = await UserModel.findById(id);
+      const profile = await UserModel.findById(input.userId);
 
-      if (!profile) return log.error("Error with find User");
+      if (!profile) throw new Error("Error with find User");
 
-      const cart = profile.cart as CartType[];
+      const cart = profile.cart as CartMessageType[];
 
       const index = cart.findIndex(
-        (item) => item.product._id.toString() === input.product._id.toString()
+        (item) => item.id.toString() === input.id.toString()
       );
 
       if (index !== -1) {
         if (input.unit > 0) {
           cart[index].unit = input.unit;
         } else {
-          const index = cart.findIndex(
-            (item) => item.product._id === input.product._id
-          );
+          const index = cart.findIndex((item) => item.id === input.id);
           cart.splice(index, 1);
         }
       } else {
@@ -198,14 +248,15 @@ class CustomerRepo {
       return savedProfile.cart;
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
 
-  async AddOrderToProfile(id: string, input: OrderInput) {
+  async AddOrderToProfile(input: OrderMessageType) {
     try {
-      const profile = await UserModel.findById(id);
+      const profile = await UserModel.findById(input.userId);
 
-      if (!profile) return log.error("Error with find User");
+      if (!profile) throw new Error("Error with find User");
 
       if (profile.order == undefined) {
         profile.order = [];
@@ -220,28 +271,46 @@ class CustomerRepo {
       return savedProfile;
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
 
-  async AddReviewToProfile(id: string, input: ReviewInput) {
+  async AddReviewToProfile(input: FeedbackMessageType) {
     try {
-      const profile = await UserModel.findById(id);
+      const profile = await UserModel.findById(input.userId);
 
-      if (!profile) return log.error("Error with find User");
+      if (!profile) throw new Error("Error with find User");
 
-      const review = profile.review as ReviewInput[];
+      const review = profile.feedback as FeedbackMessageType[];
 
-      review.push(input);
+      const index = review.findIndex((r) => r.feedId === input.feedId);
 
-      profile.review = review;
+      if (index !== -1) {
+        if (
+          review[index].rating !== input.rating ||
+          review[index].review !== input.review
+        ) {
+          review[index].rating = input.rating;
+          review[index].review = input.review;
+          console.log({ msg: "what the fuck im here" });
+        } else {
+          review.splice(index, 1);
+        }
+      } else {
+        review.push(input);
+      }
+
+      profile.feedback = review;
 
       const savedProfile = await profile.save();
 
       return savedProfile;
     } catch (error: any) {
       log.error({ err: error.message });
+      throw error;
     }
   }
+  
 }
 
 export default CustomerRepo;

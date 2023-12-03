@@ -1,5 +1,8 @@
 import ProductRepo from "../database/repository/product.repository";
-import { ProductDocsType, ProductInputType } from "../database/types/types.product";
+import {
+  ProductDocsType,
+  ProductInputType,
+} from "../database/types/types.product";
 import log from "../utils/logger";
 
 class ProductService {
@@ -36,6 +39,7 @@ class ProductService {
       });
     }
   }
+
   async updateProductService(id: number, input: ProductDocsType) {
     try {
       return await this.repository.updateProduct(id, input);
@@ -45,6 +49,7 @@ class ProductService {
       });
     }
   }
+
   async deleteProductService(id: number) {
     try {
       return await this.repository.deleteProduct(id);

@@ -1,5 +1,6 @@
-import CustomerRepo from "../database/repository/vendor.repository";
+import { Channel, Message } from "amqplib";
 import { AddressInputType } from "../database/types/type.address";
+import { EventType } from "../database/types/type.event";
 import { TeamMemberType } from "../database/types/type.teamMember";
 import {
   LoginInputType,
@@ -7,12 +8,14 @@ import {
   VendorInput,
 } from "../database/types/types.vendor";
 import log from "../utils/logger";
+import { FeedbackMessageType } from "../database/types/types.feedbacks";
+import VendorRepo from "../database/repository/vendor.repository";
 
-class CustomerService {
-  private repository: CustomerRepo;
+class VendorService {
+  private repository: VendorRepo;
 
   constructor() {
-    this.repository = new CustomerRepo();
+    this.repository = new VendorRepo();
   }
 
   async SignUp(vendorInput: VendorInput) {
@@ -112,6 +115,57 @@ class CustomerService {
       log.error({ err: error.message });
     }
   }
+
+  async createFeedbacksService(input: FeedbackMessageType) {
+    try {
+      return await this.repository.createNewFeeds(input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+  async updateFeedbacksService(input: FeedbackMessageType) {
+    try {
+      return await this.repository.updateFeeds(input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+  async deleteFeedbacksService(feedId: number) {
+    try {
+      return await this.repository.deleteFeedsFromVendor(feedId);
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+
+  async SubscribeEvent(event: EventType, channel: Channel, msg: Message) {
+    log.info(
+      "========================== Triggering an event ======================"
+    );
+    console.log(event.data, "Vendor Event");
+    try {
+      switch (event.type) {
+        case "add_feed_in_vendor":
+          this.createFeedbacksService(event.data);
+          break;
+        case "update_feed_in_vendor":
+          this.updateFeedbacksService(event.data);
+          break;
+        case "remove_feed_from_vendor":
+          this.deleteFeedbacksService(event.data.feedId);
+          break;
+        default:
+          log.info(`Unhandled event type: ${event.type}`);
+      }
+      channel.ack(msg);
+    } catch (error: any) {
+      log.info(`Error while Subscribe events: ${error.messge}`);
+      channel.nack(msg);
+    }
+  }
 }
 
-export default CustomerService;
+export default VendorService;

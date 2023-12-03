@@ -7,7 +7,8 @@ import { OrderType } from "../types/types.order";
 import { ProductType } from "../types/types.orderMenu";
 import { CustomerType } from "../types/types.customer";
 import { VendorType } from "../types/types.vendor";
-import { FeedbacksInputType } from "../types/types.feedbacks";
+import { FeedbackMessageType } from "../types/types.feedbacks";
+import log from "../../utils/logger";
 
 class DeliveryRepo {
   async CreateDeliveryMan(input: DeliveryType) {
@@ -137,9 +138,31 @@ class DeliveryRepo {
     }
   }
 
-  async createFeedback(input: FeedbacksInputType) {
+  async createFeedback(input: FeedbackMessageType) {
     try {
       return await initialize.Feedbacks.create(input);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  }
+  
+  async updateFeedback(input: FeedbackMessageType) {
+    try {
+      const id = input.feedId;
+      const [updatedFeeds] = await initialize.Feedbacks.update(input, {
+        where: { id },
+      });
+      if (updatedFeeds === 0) return log.error("Not found updated rows");
+
+      return await initialize.Feedbacks.findByPk(id);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  }
+
+  async removeFeedback(id: number) {
+    try {
+      return await initialize.Feedbacks.destroy({ where: { id } });
     } catch (error: any) {
       throw new Error(error.message);
     }
@@ -158,6 +181,7 @@ class DeliveryRepo {
               { model: initialize.Product, as: "menu" },
             ],
           },
+          { model: initialize.Feedbacks, as: "feedbacks" },
         ],
       });
       if (!delivery) throw new Error("Not found delivery");
@@ -184,6 +208,7 @@ class DeliveryRepo {
       throw new Error(error.message);
     }
   }
+
 }
 
 export default DeliveryRepo;

@@ -5,7 +5,9 @@ import cors from "cors";
 import api from "../api/api";
 import { connectToMySQL } from "../database/connectToSequelize";
 import config from "../../config";
-const createServer = () => {
+import { CreateChannel } from "./rabbitMQ.utils";
+import log from "./logger";
+const createServer = async () => {
   const app = express();
   dotenv.config();
   app.use(express.json());
@@ -17,7 +19,12 @@ const createServer = () => {
   );
 
   connectToMySQL();
-  api(app);
+  const channel = await CreateChannel();
+  if (!channel) {
+    log.error("Failed to create RabbitMQ channel. Exiting...");
+    process.exit(1);
+  }
+  api(app, channel);
   return app;
 };
 

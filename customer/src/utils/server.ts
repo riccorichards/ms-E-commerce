@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import config from "config";
 import cors from "cors";
+
 const createServer = () => {
   const app = express();
   dotenv.config();
