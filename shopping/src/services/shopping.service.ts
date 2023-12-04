@@ -45,17 +45,6 @@ class ShoppingService {
     }
   }
 
-  async CreateAddressService(
-    shippingId: number,
-    address: AddressInputValidation
-  ) {
-    try {
-      return await this.shoppingRepo.CreateAddressRepo(shippingId, address);
-    } catch (error: any) {
-      log.error(error.message);
-    }
-  }
-
   async CreateTransactionService(
     orderId: number,
     transactioInput: TransactionInputValidation
@@ -87,6 +76,22 @@ class ShoppingService {
   }
 
   async GetPaymentByIdService(id: number) {
+    try {
+      return await this.shoppingRepo.ReturnPaymentById(id);
+    } catch (error: any) {
+      log.error(error.message);
+    }
+  }
+
+  async AddVendorInfoService(id: number) {
+    try {
+      return await this.shoppingRepo.ReturnPaymentById(id);
+    } catch (error: any) {
+      log.error(error.message);
+    }
+  }
+
+  async AddDeliverymanInfoService(id: number) {
     try {
       return await this.shoppingRepo.ReturnPaymentById(id);
     } catch (error: any) {

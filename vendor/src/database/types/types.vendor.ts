@@ -17,6 +17,8 @@ export interface VendorInput {
   about: string;
   pincode: string;
   phone: string;
+  profileImg: string;
+  rating: number;
   email: string;
   password: string;
   workingHrs: WorkingHrsType;

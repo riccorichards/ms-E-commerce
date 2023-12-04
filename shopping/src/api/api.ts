@@ -26,7 +26,7 @@ const api = (app: Application) => {
 
   const service = new ShoppingService(shoppingRepo);
 
-  app.use(verifyJWT);
+  //app.use(verifyJWT);
 
   app.post(
     "/order",

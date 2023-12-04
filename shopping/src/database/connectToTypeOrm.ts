@@ -4,8 +4,10 @@ import Shipping from "./entities/shipping.entity";
 import OrderItem from "./entities/orderItem.entity";
 import Address from "./entities/address.entity";
 import Transaction from "./entities/transaction.entity";
-import Payment from "./entities/payment.entity";
 import config from "../../config";
+import Invoice from "./entities/invoice.entity";
+import Deliveryman from "./entities/deliveryman.entity";
+import Vendor from "./entities/vendor.entity";
 
 export const appDataSource = new DataSource({
   host: config.host,
@@ -14,7 +16,16 @@ export const appDataSource = new DataSource({
   password: config.password,
   username: config.username,
   database: config.database,
-  entities: [Order, Shipping, OrderItem, Address, Transaction, Payment],
+  entities: [
+    Order,
+    Shipping,
+    OrderItem,
+    Address,
+    Transaction,
+    Invoice,
+    Deliveryman,
+    Vendor,
+  ],
   synchronize: true,
   logging: false,
 });

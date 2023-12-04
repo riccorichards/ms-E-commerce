@@ -3,6 +3,7 @@ export interface ProductInputType {
   desc: string;
   price: string;
   image: string;
+  vendorAddres: string;
   discount: string;
   subCatId: number;
 }

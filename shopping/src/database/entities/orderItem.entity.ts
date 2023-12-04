@@ -18,6 +18,14 @@ class OrderItem {
   productId: number;
 
   @Column()
+  @IsString()
+  title: string;
+
+  @Column()
+  @IsString()
+  image: string;
+
+  @Column()
   @IsNumber()
   qty: number;
 

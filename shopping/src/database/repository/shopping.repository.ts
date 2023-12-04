@@ -5,7 +5,7 @@ import log from "../../utils/logger";
 import Shipping from "../entities/shipping.entity";
 import Address from "../entities/address.entity";
 import Transaction from "../entities/transaction.entity";
-import Payment from "../entities/payment.entity";
+import Payment from "../entities/invoice.entity";
 import {
   AddressInputValidation,
   OrderInputValidation,
@@ -79,36 +79,6 @@ class ShoppingRepo {
     }
   }
 
-  async CreateAddressRepo(
-    shippingId: number,
-    addressInput: AddressInputValidation
-  ) {
-    try {
-      const shipping = await this.shippingRepository.findOne({
-        where: { id: shippingId },
-        relations: ["address"],
-      });
-
-      if (!shipping) {
-        throw new Error("Shipping not Found");
-      }
-
-      const newAddress = this.addressRepository.create({
-        ...addressInput,
-        shipping: { id: shippingId },
-      });
-
-      await this.addressRepository.save(newAddress);
-
-      shipping.address = newAddress;
-
-      await this.shippingRepository.save(shipping);
-
-      return shipping;
-    } catch (error: any) {
-      log.error(error.message);
-    }
-  }
 
   async CreateTransactionRepo(
     orderId: number,
@@ -160,7 +130,7 @@ class ShoppingRepo {
   async ReturnAllPayments() {
     try {
       return await this.paymentRepository.find({
-        relations: ["order", "transaction"],
+        relations: ["order", "transaction", "shipping"],
       });
     } catch (error: any) {
       log.error(error.message);
@@ -171,13 +141,12 @@ class ShoppingRepo {
     try {
       return await this.paymentRepository.findOne({
         where: { id },
-        relations: ["order", "transaction"],
+        relations: ["order", "transaction", "shipping"],
       });
     } catch (error: any) {
       log.error(error.message);
     }
   }
-  
 }
 
 export default ShoppingRepo;

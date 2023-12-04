@@ -6,11 +6,13 @@ import {
   OneToOne,
   CreateDateColumn,
   UpdateDateColumn,
-  BaseEntity,
+  JoinColumn,
 } from "typeorm";
 import { IsEmail, IsString, Length } from "class-validator";
 import OrderItem from "./orderItem.entity";
-import Payment from "./payment.entity";
+import Invoice from "./invoice.entity";
+import Deliveryman from "./deliveryman.entity";
+import Vendor from "./vendor.entity";
 
 @Entity("orders")
 class Order {
@@ -30,7 +32,21 @@ class Order {
 
   @Column()
   @IsString()
+  @IsEmail()
+  @Length(5, 100)
+  customerAddress: string;
+
+  @Column()
+  @IsString()
   order_status: string;
+
+  @Column()
+  @IsString()
+  distance: string;
+
+  @Column()
+  @IsString()
+  duration: string;
 
   @Column({ nullable: true })
   @IsString()
@@ -43,8 +59,20 @@ class Order {
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
   orderItem: OrderItem[];
 
-  @OneToOne(() => Payment, (payment) => payment.order)
-  payment: Payment;
+  @OneToOne(() => Invoice, (invoice) => invoice.order)
+  invoice: Invoice;
+
+  @OneToOne(() => Deliveryman, { cascade: true })
+  @JoinColumn({
+    name: "deliveryman_id",
+  })
+  deliverymna: Deliveryman;
+
+  @OneToOne(() => Vendor, { cascade: true })
+  @JoinColumn({
+    name: "vendor_id",
+  })
+  vendor: Vendor;
 
   @CreateDateColumn()
   createdAt: Date;

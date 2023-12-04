@@ -1,11 +1,5 @@
-import { IsDate, IsString, Length } from "class-validator";
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  OneToOne,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { IsString, Length } from "class-validator";
+import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import Shipping from "./shipping.entity";
 
 @Entity("address")

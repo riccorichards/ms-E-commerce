@@ -7,6 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import Address from "./address.entity";
+import Vendor from "./vendor.entity";
+import Deliveryman from "./deliveryman.entity";
 
 @Entity("shipping")
 class Shipping {
@@ -44,6 +46,18 @@ class Shipping {
     name: "address_id",
   })
   address: Address;
+
+  @OneToOne(() => Vendor, { cascade: true })
+  @JoinColumn({
+    name: "vendor_id",
+  })
+  vendor: Vendor;
+
+  @OneToOne(() => Deliveryman, { cascade: true })
+  @JoinColumn({
+    name: "deliveryman_id",
+  })
+  deliveryman: Deliveryman;
 }
 
 export default Shipping;

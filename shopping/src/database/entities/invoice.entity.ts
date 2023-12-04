@@ -10,9 +10,8 @@ import Transaction from "./transaction.entity";
 import Order from "./order.entity";
 import Shipping from "./shipping.entity";
 
-@Entity("payment")
-  
-class Payment {
+@Entity("invoice")
+class Invoice {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -40,4 +39,4 @@ class Payment {
   shipping: Shipping;
 }
 
-export default Payment;
+export default Invoice;

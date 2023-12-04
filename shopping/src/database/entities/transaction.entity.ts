@@ -1,6 +1,6 @@
 import { IsString } from "class-validator";
 import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from "typeorm";
-import Payment from "./payment.entity";
+import Invoice from "./invoice.entity";
 
 @Entity("transaction")
 class Transaction {
@@ -19,8 +19,8 @@ class Transaction {
   @IsString()
   tnx_status: string;
 
-  @OneToOne(() => Payment, (payment) => payment.transaction)
-  payment: Payment;
+  @OneToOne(() => Invoice, (invoice) => invoice.transaction)
+  invoice: Invoice;
 }
 
 export default Transaction;

@@ -2,7 +2,7 @@ import { appDataSource } from "../connectToTypeOrm";
 import Address from "../entities/address.entity";
 import Order from "../entities/order.entity";
 import OrderItem from "../entities/orderItem.entity";
-import Payment from "../entities/payment.entity";
+import Payment from "../entities/invoice.entity";
 import Shipping from "../entities/shipping.entity";
 import Transaction from "../entities/transaction.entity";
 

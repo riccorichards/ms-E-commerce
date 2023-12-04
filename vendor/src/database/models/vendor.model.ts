@@ -10,6 +10,8 @@ const VendorSchema = new mongoose.Schema(
     ownerName: { type: String, required: true },
     about: { type: String },
     pincode: { type: String, required: true },
+    rating: { type: Number, required: true },
+    profileImg: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String, required: true },
     password: { type: String, required: true },
