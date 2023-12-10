@@ -11,7 +11,8 @@ const createServer = () => {
   app.use(express.json());
   app.use(
     cors({
-      origin: config.get<string>("origin"),
+      origin: config.origin,
+      credentials: true,
     })
   );
   return app;
