@@ -33,7 +33,7 @@ export const deserializeUser = async (
         res.setHeader("x-access-token", newAccessToken);
 
         res.cookie("accessToken", newAccessToken, {
-          httpOnly: true,
+          httpOnly: false,
           path: "/",
           secure: false,
           sameSite: "strict",

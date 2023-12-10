@@ -3,12 +3,11 @@ import UserModel from "../models/user.model";
 import {
   AddressInputType,
   BankAccountType,
-  LoginInputType,
+  SessionInputType,
   UpdateAddressInput,
   UpdateBankAccountType,
   UpdateUserInput,
   UserDocument,
-  UserInput,
 } from "../types/types.customer";
 import log from "../../utils/logger";
 import { WishlistMessageType } from "../types/type.wishlist";
@@ -18,10 +17,10 @@ import { FeedbackMessageType } from "../types/types.feedback";
 import SessionModel from "../models/session.model";
 import { omit } from "lodash";
 import BankModel from "../models/bank.model";
+import { CreateUserSchemaType } from "../../api/middleware/validation/user.validation";
 
 class CustomerRepo {
-
-  async CreateCustomer(input: UserInput) {
+  async CreateCustomer(input: CreateUserSchemaType) {
     try {
       const newCustomer = await UserModel.create({
         ...input,
@@ -41,10 +40,9 @@ class CustomerRepo {
     }
   }
 
-  async CreateSession(input: LoginInputType, userAgent: string) {
+  async CreateSession(input: SessionInputType, userAgent: string) {
     try {
       const user = await UserModel.findOne({ email: input.email });
-
       if (!user) {
         throw new Error("Wrong credentials");
       }
@@ -63,6 +61,19 @@ class CustomerRepo {
       return newSession;
     } catch (error: any) {
       throw new Error(error.message);
+    }
+  }
+
+  async CheckValidUser(userId: string) {
+    try {
+      const result = await SessionModel.findOne({ user: userId });
+      if (!result) throw new Error("Error while looking session");
+      return result.valid;
+    } catch (error) {
+      if (error instanceof Error) {
+        log.error({ err: error.message });
+        throw new Error(error.message);
+      }
       throw error;
     }
   }
@@ -310,7 +321,6 @@ class CustomerRepo {
       throw error;
     }
   }
-  
 }
 
 export default CustomerRepo;

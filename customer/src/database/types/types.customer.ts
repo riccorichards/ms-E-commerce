@@ -84,3 +84,8 @@ export interface UpdateBankAccountType {
   debit_card: number;
   bankOf: string;
 }
+
+export interface SessionInputType {
+  email: string;
+  password: string;
+}

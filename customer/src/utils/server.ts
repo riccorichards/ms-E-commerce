@@ -1,8 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import config from "config";
 import cors from "cors";
+import config from "../../config/default";
 
 const createServer = () => {
   const app = express();
@@ -11,7 +11,8 @@ const createServer = () => {
   app.use(express.json());
   app.use(
     cors({
-      origin: config.get<string>("origin"),
+      origin: config.origin,
+      credentials: true,
     })
   );
   return app;

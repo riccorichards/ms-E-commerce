@@ -1,11 +1,4 @@
-import mongoose from "mongoose";
-import { object, string, TypeOf, number, z } from "zod";
-
-const objectId = z
-  .string()
-  .refine((value) => mongoose.Types.ObjectId.isValid(value), {
-    message: "Invalid ObjectId",
-  });
+import { object, string, TypeOf } from "zod";
 
 const payload = {
   body: object({
@@ -21,17 +14,6 @@ const payload = {
     confirmPassword: string({
       required_error: "Confirm password is Required!",
     }),
-    balance: number()
-      .int("Balance must be an integer")
-      .min(10, "Account creation requires a minimum balance of $10 or more"),
-    debit_card: string({
-      required_error: "Debit_card is Required!",
-    }),
-    address: z.array(objectId),
-    wishlist: z.array(objectId),
-    cart: z.array(objectId),
-    order: z.array(objectId),
-    productReview: z.array(objectId),
   }).refine((data) => data.password === data.confirmPassword, {
     message: "Password does not match!",
     path: ["confirmPassword"],

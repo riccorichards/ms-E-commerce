@@ -5,17 +5,16 @@ import { WishlistMessageType } from "../database/types/type.wishlist";
 import {
   AddressInputType,
   BankAccountType,
-  LoginInputType,
+  SessionInputType,
   UpdateAddressInput,
   UpdateBankAccountType,
   UpdateUserInput,
-  UserInput,
 } from "../database/types/types.customer";
 import { FeedbackMessageType } from "../database/types/types.feedback";
 import { OrderMessageType } from "../database/types/types.order";
 import log from "../utils/logger";
 import { EventType } from "../database/types/type.event";
-import { date } from "zod";
+import { CreateUserSchemaType } from "../api/middleware/validation/user.validation";
 
 class CustomerService {
   private repository: CustomerRepo;
@@ -24,7 +23,7 @@ class CustomerService {
     this.repository = new CustomerRepo();
   }
 
-  async SignUp(userInput: UserInput) {
+  async SignUp(userInput: CreateUserSchemaType) {
     try {
       const newCustomer = await this.repository.CreateCustomer(userInput);
 
@@ -34,7 +33,7 @@ class CustomerService {
     }
   }
 
-  async SessionService(input: LoginInputType, userAgent: string) {
+  async SessionService(input: SessionInputType, userAgent: string) {
     try {
       return await this.repository.CreateSession(input, userAgent);
     } catch (error: any) {
@@ -42,7 +41,16 @@ class CustomerService {
     }
   }
 
+  async CheckValidUserService(userId: string) {
+    try {
+      return await this.repository.CheckValidUser(userId);
+    } catch (error: any) {
+      throw new Error(error.message);
+    }
+  }
+  
   async UserAddress(input: AddressInputType) {
+    console.log({ input, note: "Service" });
     try {
       const newAddress = await this.repository.AddAddress(input);
       return newAddress

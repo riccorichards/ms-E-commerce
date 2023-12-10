@@ -3,7 +3,7 @@ import { AddressDocument } from "../types/types.customer";
 
 const address = new mongoose.Schema(
   {
-    user: { type: mongoose.Types.ObjectId, ref: "User" },
+    userId: { type: mongoose.Types.ObjectId, ref: "User" },
     street: { type: String },
     postalCode: { type: String },
     city: { type: String },
