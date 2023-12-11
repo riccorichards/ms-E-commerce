@@ -10,7 +10,7 @@ export default {
   accessRefreshTtl: process.env["REFRESH_TOKEN_TIME_TO_LIVE"],
   mongo_dev_url: process.env["MONGO_DEVELOPMENT_URL"],
   message_broker_url: process.env["MESSAGE_BROKER_URL"],
-  exchange_name: "customer_exchange",
+  exchange_name: "exchange_name",
   vendor_binding_key: "path_to_vendor",
   vendor_queue: "vendor",
 };

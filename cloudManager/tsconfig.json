@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2017", // Set according to your Node.js version
+    "module": "commonjs", // CommonJS for Node.js applications
+    "lib": ["es2017", "esnext"], // Include features from ES2017 and later
+    "outDir": "./dist", // Output directory for compiled files
+    "rootDir": "./", // Root directory of your source files
+    "strict": true, // Enable all strict type-checking options
+    "strictPropertyInitialization": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true, // Enables compatibility with Babel/ES6 module imports
+    "experimentalDecorators": true, // Enable experimental support for decorators
+    "emitDecoratorMetadata": true, // Emit design-type metadata for decorated declarations
+    "skipLibCheck": true // Skip type checking of all declaration files (*.d.ts)
+  },
+  "include": ["src/**/*.ts"], // Files to be included in compilation
+  "exclude": ["node_modules"] // Exclude 'node_modules' from compilation
+}

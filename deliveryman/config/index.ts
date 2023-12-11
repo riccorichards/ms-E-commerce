@@ -12,7 +12,7 @@ export default {
   accessTokenTtl: process.env["ACCESS_TOKEN_TIME_TO_LIFE"],
   refreshTtl: process.env["REFRESH_TOKEN_TIME_TO_LIFE"],
   message_broker_url: process.env["MESSAGE_BROKER_URL"],
-  exchange_name: "customer_exchange",
+  exchange_name: "exchange_name",
   deliveryman_binding_key: "path_to_deliveryman",
   deliveryman_queue: "deliveryman",
 };

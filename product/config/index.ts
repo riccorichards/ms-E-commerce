@@ -10,7 +10,7 @@ export default {
   port: 8002,
   origin: "http://localhost:3000",
   message_broker_url: process.env["MESSAGE_BROKER_URL"],
-  exchange_name: "customer_exchange",
+  exchange_name: "exchange_name",
   product_binding_key: "path_to_product",
   customer_binding_key: "path_to_customer",
   product_queue: "product",
