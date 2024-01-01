@@ -17,17 +17,8 @@ const teamPayload = {
   }),
 };
 
-const teamParams = {
-  params: object({
-    vendorId: string({
-      required_error: "Member's ID is Required!",
-    }),
-  }),
-};
-
 export const CreateTeamMemberSchema = object({ ...teamPayload });
 export const UpdateTeamMemberSchema = object({
-  ...teamParams,
   ...teamPayload,
 });
 

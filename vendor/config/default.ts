@@ -3,7 +3,7 @@ dotenv.config();
 
 export default {
   port: 5000,
-  origin: "http://localhost:3000",
+  origin: "http://localhost:5173",
   rsaPriviteKey: process.env["RSA_PRIVATE_KEY"],
   rsaPublicKey: process.env["RSA_PUBLIC_KEY"],
   accessTokenTtl: process.env["ACCESS_TOKEN_TIME_TO_LIVE"],

@@ -4,7 +4,8 @@ import log from "../../utils/logger";
 import { get } from "lodash";
 
 interface GlobalUserType {
-  _id: string;
+  vendor?: string;
+  customer?: string;
 }
 
 const publicKey = Buffer.from(
@@ -23,13 +24,14 @@ declare global {
 export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   try {
     const accessToken =
-      get(req, "cookies.accessToken") ||
+      get(req, "cookies.vendor-accessToken") ||
       get(req, "headers.authorization", "").replace(/^Bearer\s/, "");
 
     if (!accessToken) return res.status(401).json({ msg: "No token provided" });
 
     jwt.verify(accessToken, publicKey, (err: any, user: any) => {
       if (err) return res.status(403).json({ msg: "Invalid token" });
+      console.log(user, "<<<<<<<<<<<<<<<<<<, JWT");
       req.user = user;
       next();
     });

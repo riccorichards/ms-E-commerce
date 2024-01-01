@@ -1,4 +1,4 @@
-import { IsNumber, IsString, Length } from "class-validator";
+import { IsIn, IsNumber, IsOptional, IsString, Length } from "class-validator";
 
 export class FeedbackValidation {
   @IsString()
@@ -7,23 +7,33 @@ export class FeedbackValidation {
   @IsString()
   author: string;
 
+  @IsOptional()
   @IsString()
-  profileImg: string;
+  authorImg: string;
 
   @IsString()
-  to: string;
+  @IsIn(["vendor", "product", "deliveryman"])
+  address: string;
 
+  @IsOptional()
   @IsNumber()
-  targetId: number;
+  targetId?: number;
 
+  @IsString()
+  targetImg: string;
+
+  @IsString()
+  targetTitle: string;
+
+  @IsOptional()
+  @IsString()
+  forVendorId?: string;
+
+  @IsOptional()
   @IsNumber()
-  @IsString()
-  forVendor: string;
+  vendorRating?: number;
 
   @IsString()
-  @Length(3, 300)
+  @Length(3, 150)
   review: string;
-
-  @IsNumber()
-  rating: number;
 }

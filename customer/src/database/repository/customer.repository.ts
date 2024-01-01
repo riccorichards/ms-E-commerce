@@ -7,17 +7,20 @@ import {
   UpdateAddressInput,
   UpdateBankAccountType,
   UpdateUserInput,
+  UploadFileType,
   UserDocument,
 } from "../types/types.customer";
 import log from "../../utils/logger";
 import { WishlistMessageType } from "../types/type.wishlist";
 import { CartMessageType } from "../types/type.cart";
 import { OrderMessageType } from "../types/types.order";
-import { FeedbackMessageType } from "../types/types.feedback";
+import { FeedbackDocType, FeedbackMessageType } from "../types/types.feedback";
 import SessionModel from "../models/session.model";
 import { omit } from "lodash";
 import BankModel from "../models/bank.model";
 import { CreateUserSchemaType } from "../../api/middleware/validation/user.validation";
+import bcrypt from "bcrypt";
+import FeedbackModel from "../models/feedback.model";
 
 class CustomerRepo {
   async CreateCustomer(input: CreateUserSchemaType) {
@@ -42,7 +45,9 @@ class CustomerRepo {
 
   async CreateSession(input: SessionInputType, userAgent: string) {
     try {
-      const user = await UserModel.findOne({ email: input.email });
+      const user = await UserModel.findOne({ email: input.email })
+        .populate("address")
+        .populate("bank");
       if (!user) {
         throw new Error("Wrong credentials");
       }
@@ -58,29 +63,16 @@ class CustomerRepo {
         userAgent,
       });
 
-      return newSession;
+      return { user, newSession };
     } catch (error: any) {
       throw new Error(error.message);
-    }
-  }
-
-  async CheckValidUser(userId: string) {
-    try {
-      const result = await SessionModel.findOne({ user: userId });
-      if (!result) throw new Error("Error while looking session");
-      return result.valid;
-    } catch (error) {
-      if (error instanceof Error) {
-        log.error({ err: error.message });
-        throw new Error(error.message);
-      }
-      throw error;
     }
   }
 
   async AddAddress(input: AddressInputType) {
     try {
       const { userId, street, postalCode, city, country } = input;
+
       const user = (await UserModel.findById(userId)) as UserDocument;
       const newAddress = await AddressModel.create({
         userId,
@@ -130,7 +122,19 @@ class CustomerRepo {
 
   async UpdateCustomerProfile(query: string, input: UpdateUserInput) {
     try {
-      return await UserModel.findByIdAndUpdate(query, input, { new: true });
+      if (input.newPassword) {
+        const password = input?.newPassword;
+        const salt = await bcrypt.genSalt(13);
+        const hash = await bcrypt.hash(password, salt);
+
+        return await UserModel.findByIdAndUpdate(
+          query,
+          { ...input, password: hash },
+          { new: true }
+        );
+      } else {
+        return await UserModel.findByIdAndUpdate(query, input, { new: true });
+      }
     } catch (error: any) {
       log.error({ err: error.message });
       throw error;
@@ -168,6 +172,36 @@ class CustomerRepo {
     }
   }
 
+  async CheckCurrentPassword(query: string, password: string) {
+    try {
+      const profile = await UserModel.findById(query);
+      console.log({ password, note: "Repo" });
+      const result = await profile?.comparePass(password);
+      console.log({ result, note: "Repo" });
+      return result;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+
+  async UploadProfile(input: UploadFileType) {
+    try {
+      const profile = await UserModel.findById(input.userId);
+
+      if (!profile) throw new Error("Customer not found");
+
+      profile.image = input.url;
+
+      await profile.save();
+
+      return profile;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+
   async FindCustomer(id: string) {
     try {
       return await UserModel.findById(id).populate("address").populate("bank");
@@ -180,7 +214,7 @@ class CustomerRepo {
   async GetUserSpecificData(id: string, fieldToPopulated: string) {
     try {
       const field = fieldToPopulated.toLowerCase();
-      const customer = await UserModel.findById(id);
+      const customer = await UserModel.findById(id).populate("feedback");
 
       if (!customer) {
         throw new Error("Customer not found");
@@ -255,7 +289,6 @@ class CustomerRepo {
       profile.cart = cart;
 
       const savedProfile = await profile.save();
-
       return savedProfile.cart;
     } catch (error: any) {
       log.error({ err: error.message });
@@ -286,36 +319,37 @@ class CustomerRepo {
     }
   }
 
-  async AddReviewToProfile(input: FeedbackMessageType) {
+  async ManageReviewToProfile(input: FeedbackMessageType) {
     try {
       const profile = await UserModel.findById(input.userId);
 
       if (!profile) throw new Error("Error with find User");
 
-      const review = profile.feedback as FeedbackMessageType[];
+      if (!Boolean(await FeedbackModel.findOne({ feedId: input.feedId }))) {
+        const newFeedback = await FeedbackModel.create(input);
 
-      const index = review.findIndex((r) => r.feedId === input.feedId);
+        if (!newFeedback)
+          throw new Error("Error while creating a new feed in repo");
 
-      if (index !== -1) {
-        if (
-          review[index].rating !== input.rating ||
-          review[index].review !== input.review
-        ) {
-          review[index].rating = input.rating;
-          review[index].review = input.review;
-          console.log({ msg: "what the fuck im here" });
-        } else {
-          review.splice(index, 1);
-        }
+        profile.feedback.push(newFeedback._id);
+
+        await profile.save();
+
+        return profile;
       } else {
-        review.push(input);
+        const existingFeed = await FeedbackModel.findOne({
+          feedId: input.feedId,
+        });
+        profile.feedback = profile.feedback.filter(
+          (feed) => feed.toString() !== existingFeed?._id.toString()
+        );
+
+        await profile.save();
+
+        await FeedbackModel.findByIdAndDelete(existingFeed?._id);
+
+        return profile;
       }
-
-      profile.feedback = review;
-
-      const savedProfile = await profile.save();
-
-      return savedProfile;
     } catch (error: any) {
       log.error({ err: error.message });
       throw error;

@@ -5,9 +5,9 @@ export const requestUser = (
   res: Response,
   next: NextFunction
 ) => {
-  const user = res.locals.user;
-  if (!user)
-    return res.status(403).json({ msg: "Could not found the user..." });
+  const vendor = res.locals.vendor;
+  if (!vendor)
+    return res.status(403).json({ msg: "Could not found the vendor..." });
 
   next();
 };

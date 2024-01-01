@@ -7,15 +7,11 @@ class Delivery
 {
   public id!: number;
   public name!: string;
-  public rating!: number;
   public email!: string;
   public password!: string;
-  public orderAmount!: number;
+  public isValid!: boolean;
   public image!: string;
-  public reviewAmount!: number;
-  public totalEarn!: string;
-  public lat!: number;
-  public lng!: number;
+  public currentAddress!: string;
 }
 
 export const DeliveryModel = (sequelize: Sequelize) => {
@@ -28,15 +24,15 @@ export const DeliveryModel = (sequelize: Sequelize) => {
         allowNull: false,
       },
       name: { type: DataTypes.STRING, allowNull: false },
-      rating: { type: DataTypes.INTEGER, allowNull: false },
       password: { type: DataTypes.STRING, allowNull: false },
       email: { type: DataTypes.STRING, allowNull: false, unique: true },
-      orderAmount: { type: DataTypes.INTEGER, allowNull: false },
       image: { type: DataTypes.STRING, allowNull: false },
-      reviewAmount: { type: DataTypes.INTEGER, allowNull: false },
-      totalEarn: { type: DataTypes.STRING, allowNull: false },
-      lat: { type: DataTypes.FLOAT, allowNull: false },
-      lng: { type: DataTypes.FLOAT, allowNull: false },
+      isValid: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
+      currentAddress: { type: DataTypes.STRING, allowNull: false },
     },
     { sequelize, modelName: "deliveries", timestamps: true }
   );

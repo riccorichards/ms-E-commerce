@@ -1,9 +1,12 @@
+import {
+  IncomingProductType,
+  IncomingProductUpdateValidationType,
+} from "../../api/middleware/validation/product.validation";
 import log from "../../utils/logger";
 import initialize from "../initialize";
-import { ProductDocsType, ProductInputType } from "../types/types.product";
 
 class ProductRepo {
-  async createProduct(input: ProductInputType) {
+  async createProduct(input: IncomingProductType["body"]) {
     try {
       return await initialize.Product.create(input);
     } catch (error: any) {
@@ -25,6 +28,18 @@ class ProductRepo {
     }
   }
 
+  async getVendorsProducts(vendorName: string) {
+    try {
+      return await initialize.Product.findAll({
+        where: { vendor_name: vendorName },
+      });
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+
   async getProductById(id: number) {
     try {
       return await initialize.Product.findByPk(id, {
@@ -37,7 +52,10 @@ class ProductRepo {
     }
   }
 
-  async updateProduct(id: number, input: ProductDocsType) {
+  async updateProduct(
+    id: number,
+    input: IncomingProductUpdateValidationType["body"]
+  ) {
     try {
       const [updatedProduct] = await initialize.Product.update(input, {
         where: { id },

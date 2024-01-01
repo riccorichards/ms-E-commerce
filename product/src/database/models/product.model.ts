@@ -10,7 +10,9 @@ class Product
   public desc!: string;
   public price!: string;
   public image!: string;
-  public vendorAddres!: string;
+  public vendor_name!: string;
+  public address!: string;
+  public vendor_rating!: number;
   public discount!: string;
   public subCatId!: number;
   public createdAt!: Date;
@@ -42,8 +44,16 @@ export const ProductModel = (sequelize: Sequelize) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      vendorAddres: {
+      vendor_name: {
         type: DataTypes.STRING,
+        allowNull: false,
+      },
+      address: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      vendor_rating: {
+        type: DataTypes.DECIMAL(2, 1),
         allowNull: false,
       },
       discount: {

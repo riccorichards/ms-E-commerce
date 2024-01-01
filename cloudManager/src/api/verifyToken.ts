@@ -6,11 +6,17 @@ import dotenv from "dotenv";
 dotenv.config();
 
 interface GlobalUserType {
-  _id: string;
+  user: string;
+  vendor: string;
 }
 
 const publicKey = Buffer.from(
   process.env["RSA_PUBLIC_KEY"] || "",
+  "base64"
+).toString("ascii");
+
+const vendorPublicKey = Buffer.from(
+  process.env["VENDOR_RSA_PUBLIC_KEY"] || "",
   "base64"
 ).toString("ascii");
 
@@ -22,14 +28,49 @@ declare global {
   }
 }
 
+const decodeIncomingToken = (token: string) => {
+  try {
+    return jwt.decode(token);
+  } catch (error) {
+    if (error instanceof Error) {
+      log.error("Error decoding token", error.message);
+      return null;
+    }
+  }
+};
+
+interface DecodedType {
+  type: string;
+}
+
 export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   try {
     const accessToken =
       get(req, "cookies.accessToken") ||
+      get(req, "headers.authorization", "").replace(/^Bearer\s/, "") ||
+      get(req, "cookies.vendor-accessToken") ||
       get(req, "headers.authorization", "").replace(/^Bearer\s/, "");
 
     if (!accessToken) return res.status(401).json({ msg: "No token provided" });
-    jwt.verify(accessToken, publicKey, (err: any, user: any) => {
+
+    const decodedToken = decodeIncomingToken(accessToken) as DecodedType;
+
+    if (!decodedToken) return res.status(403).json({ msg: "Invalid token" });
+
+    const userType = decodedToken.type;
+    let targetKey;
+    switch (userType) {
+      case "customer":
+        targetKey = publicKey;
+        break;
+      case "vendor":
+        targetKey = vendorPublicKey;
+        break;
+      default:
+        return res.status(403).json({ msg: "Invalid user type" });
+    }
+
+    jwt.verify(accessToken, targetKey, (err: any, user: any) => {
       if (err) return res.status(403).json({ msg: "Invalid token" });
       req.user = user;
       next();

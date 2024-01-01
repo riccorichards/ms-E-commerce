@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import config from "config";
-import log from "./logger";
 
 const privateKey = Buffer.from(
   config.get<string>("rsaPriviteKey"),
@@ -12,12 +11,10 @@ const publicKey = Buffer.from(
   "base64"
 ).toString("ascii");
 
-
 export const signWihtJWT = (
   object: Object,
   options?: jwt.SignOptions | undefined
 ) => {
-  
   return jwt.sign(object, privateKey, {
     ...(options && options),
     algorithm: "RS256",
@@ -35,9 +32,7 @@ export const verifyJWT = (token: string) => {
       expired: false,
       decoded,
     };
-    
   } catch (error: any) {
-    log.error(error.message, "Error in verify jwt");
     return {
       valid: false,
       expired: error.message === "jwt expired",

@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { WishlistMessageType } from "./type.wishlist";
 import { CartMessageType } from "./type.cart";
-import { FeedbackMessageType } from "./types.feedback";
 import { OrderInput } from "./types.order";
 
 // medel for mongodb... schema's part which could recevied from the client side
@@ -9,11 +8,13 @@ export interface UserInput {
   username: string;
   email: string;
   password: string;
+  image: string;
+  isAdmin: boolean;
   bonus: number;
   address: mongoose.Schema.Types.ObjectId;
   bank: mongoose.Schema.Types.ObjectId;
   wishlist: WishlistMessageType[];
-  feedback: FeedbackMessageType[];
+  feedback: mongoose.Schema.Types.ObjectId[];
   cart: CartMessageType[];
   order: OrderInput[];
 }
@@ -50,9 +51,7 @@ export interface AddressDocument extends AddressInputType, mongoose.Document {
 export interface UpdateUserInput {
   username: string;
   email: string;
-  password: string;
-  balance: string;
-  debit_card: number;
+  newPassword: string;
 }
 
 //for update address
@@ -88,4 +87,10 @@ export interface UpdateBankAccountType {
 export interface SessionInputType {
   email: string;
   password: string;
+}
+
+export interface UploadFileType {
+  type: string;
+  url: string;
+  userId: string;
 }

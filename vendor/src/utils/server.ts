@@ -11,6 +11,7 @@ const createServer = () => {
   app.use(
     cors({
       origin: config.get<string>("origin"),
+      credentials: true,
     })
   );
   return app;

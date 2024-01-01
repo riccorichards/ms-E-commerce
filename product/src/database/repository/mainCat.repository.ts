@@ -1,10 +1,11 @@
+import { IncomingMainCatValidationType } from "../../api/middleware/validation/mainCategory.validation";
 import log from "../../utils/logger";
 import initialize from "../initialize";
 import { MainCatInputType } from "../types/types.mainCategory";
 
 class MainCatRepo {
   // main category
-  async createMainCut(input: MainCatInputType) {
+  async createMainCut(input: IncomingMainCatValidationType["body"]) {
     try {
       return await initialize.MainCat.create(input);
     } catch (error: any) {
@@ -13,9 +14,7 @@ class MainCatRepo {
   }
   async getMainCats() {
     try {
-      return await initialize.MainCat.findAll({
-        include: [{ model: initialize.SubCat, as: "subCategories" }],
-      });
+      return await initialize.MainCat.findAll();
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -23,7 +22,12 @@ class MainCatRepo {
   async getMainCatById(id: number) {
     try {
       return await initialize.MainCat.findByPk(id, {
-        include: [{ model: initialize.SubCat, as: "subCategories" }],
+        include: [
+          {
+            model: initialize.SubCat,
+            as: "subCategories",
+          },
+        ],
       });
     } catch (error: any) {
       log.error({ err: error.message });

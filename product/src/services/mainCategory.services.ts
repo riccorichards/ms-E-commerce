@@ -1,3 +1,4 @@
+import { IncomingMainCatValidationType } from "../api/middleware/validation/mainCategory.validation";
 import MainCatRepo from "../database/repository/mainCat.repository";
 import { MainCatInputType } from "../database/types/types.mainCategory";
 import log from "../utils/logger";
@@ -9,7 +10,7 @@ class MainCatService {
     this.repository = new MainCatRepo();
   }
 
-  async createMainCatService(input: MainCatInputType) {
+  async createMainCatService(input: IncomingMainCatValidationType["body"]) {
     try {
       return await this.repository.createMainCut(input);
     } catch (error: any) {

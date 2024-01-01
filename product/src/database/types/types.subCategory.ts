@@ -1,6 +1,7 @@
 export interface SubCatInputType {
   title: string;
   desc: string;
+  vendorId: string;
   mainCatId: number;
 }
 

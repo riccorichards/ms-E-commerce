@@ -3,28 +3,17 @@ import initialize from "../initialize";
 import { DeliveryType } from "../types/type.delivery";
 import { LoginStyle } from "../types/type.session";
 import bcrypt from "bcrypt";
-import { OrderType } from "../types/types.order";
 import { ProductType } from "../types/types.orderMenu";
-import { CustomerType } from "../types/types.customer";
-import { VendorType } from "../types/types.vendor";
 import { FeedbackMessageType } from "../types/types.feedbacks";
 import log from "../../utils/logger";
+import { RepoErrorHandler } from "./RepoErrorHandler";
+import { IncomingDeliveryDataType } from "../../api/middleware/validation/deliveryman.validation";
+import { IncomingOrderDataType } from "../../api/middleware/validation/orders.validation";
 
 class DeliveryRepo {
-  async CreateDeliveryMan(input: DeliveryType) {
+  async CreateDeliveryMan(input: IncomingDeliveryDataType["body"]) {
     try {
-      const {
-        name,
-        email,
-        password,
-        rating,
-        orderAmount,
-        image,
-        reviewAmount,
-        totalEarn,
-        lat,
-        lng,
-      } = input;
+      const { name, email, password, image, currentAddress } = input;
 
       const salt = await bcrypt.genSalt(13);
 
@@ -34,28 +23,22 @@ class DeliveryRepo {
         name,
         email,
         password: hashedPassword,
-        rating,
-        orderAmount,
         image,
-        reviewAmount,
-        totalEarn,
-        lat,
-        lng,
+        isValid: true,
+        currentAddress,
       });
 
       if (!newDeliveryMan)
         throw new Error("Error while creating a new delivery person");
 
       return omit((await newDeliveryMan).toJSON(), "password");
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
   async CreateSession({ email, password }: LoginStyle, userAgent: string) {
     try {
-      console.log({ email, password });
-
       const deliveryman = await initialize.Delivery.findOne({
         where: { email: email },
       });
@@ -71,9 +54,9 @@ class DeliveryRepo {
         userAgent,
       });
 
-      return newSession;
-    } catch (error: any) {
-      throw new Error(error.message);
+      return { deliveryman, newSession };
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
@@ -95,57 +78,56 @@ class DeliveryRepo {
 
       const { password, ...other } = result.dataValues;
       return other;
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
-  async CreateOrder(input: OrderType) {
+  async CreateOrder(input: IncomingOrderDataType["body"]) {
     try {
       return await initialize.Order.create(input);
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
+    }
+  }
+
+  async GetAllDeliverymen() {
+    try {
+      const result = await initialize.Delivery.findAll({
+        where: { isValid: true },
+        raw: true,
+      });
+      if (!result) throw new Error("Deliveryman Not Found");
+      return result.map((res) => ({
+        address: res.currentAddress,
+        personId: res.id,
+      }));
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
   async AddOrderMenu(input: ProductType[]) {
     try {
-      console.log(input);
       const newOrderMenu = await Promise.all(
         input.map(async (product: ProductType) => {
           return await initialize.Product.create(product);
         })
       );
       return newOrderMenu;
-    } catch (error: any) {
-      throw new Error(error);
-    }
-  }
-
-  async AddCustomerInfo(input: CustomerType) {
-    try {
-      return await initialize.Customer.create(input);
-    } catch (error: any) {
-      throw new Error(error.message);
-    }
-  }
-
-  async AddvendorInfo(input: VendorType) {
-    try {
-      return await initialize.Vendor.create(input);
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
   async createFeedback(input: FeedbackMessageType) {
     try {
       return await initialize.Feedbacks.create(input);
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
-  
+
   async updateFeedback(input: FeedbackMessageType) {
     try {
       const id = input.feedId;
@@ -155,16 +137,16 @@ class DeliveryRepo {
       if (updatedFeeds === 0) return log.error("Not found updated rows");
 
       return await initialize.Feedbacks.findByPk(id);
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
   async removeFeedback(id: number) {
     try {
       return await initialize.Feedbacks.destroy({ where: { id } });
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
@@ -175,11 +157,7 @@ class DeliveryRepo {
           {
             model: initialize.Order,
             as: "orders",
-            include: [
-              { model: initialize.Customer, as: "customer" },
-              { model: initialize.Vendor, as: "vendor" },
-              { model: initialize.Product, as: "menu" },
-            ],
+            include: [{ model: initialize.Product, as: "menu" }],
           },
           { model: initialize.Feedbacks, as: "feedbacks" },
         ],
@@ -187,8 +165,8 @@ class DeliveryRepo {
       if (!delivery) throw new Error("Not found delivery");
       const { password, ...other } = delivery.dataValues;
       return other;
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
 
@@ -204,11 +182,10 @@ class DeliveryRepo {
       if (!delivery) throw new Error("Not found delivery");
       const { password, ...other } = delivery.dataValues;
       return other;
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      RepoErrorHandler(error);
     }
   }
-
 }
 
 export default DeliveryRepo;

@@ -16,13 +16,14 @@ const createServer = async () => {
   app.use(
     cors({
       origin: config.origin,
+      credentials: true,
     })
   );
 
   connectToMySQL();
 
   const channel = await CreateChannel();
-  
+
   if (!channel) {
     log.error("Failed to create RabbitMQ channel. Exiting...");
     process.exit(1);

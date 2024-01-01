@@ -1,10 +1,22 @@
-import { Response } from "express";
+import { validate } from "class-validator";
+import { NextFunction, Request, Response } from "express";
+import { FeedbackValidation } from "../database/validation/feedback.validation";
+import { plainToClass } from "class-transformer";
 
-export const incomingErrorHandler = (errors: [], res: Response) => {
-  if (errors.length > 0) {
-    const message = errors
-      .map((error: any) => Object.values(error.constraints))
-      .join(", ");
-    return res.status(400).json({ msg: message });
+export async function validateIncomingData(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const incomingFeedInput = plainToClass(FeedbackValidation, req.body);
+
+  const inputErrors = await validate(incomingFeedInput, {
+    validationError: { target: true },
+  });
+
+  if (inputErrors.length > 0) {
+    return res.status(400).json(inputErrors);
+  } else {
+    next();
   }
-};
+}

@@ -1,6 +1,6 @@
 import { Channel, Message } from "amqplib";
 import FeedbacksRepo from "../database/repository/feedbacks.repository";
-import { FeedbackMessageType } from "../database/types/types.feedbacks";
+import { FeedbackMessageType, UpdateFeedbackMessageType } from "../database/types/types.feedbacks";
 import log from "../utils/logger";
 import { EventType } from "../database/types/type.event";
 
@@ -30,7 +30,7 @@ class FeedbacksService {
     }
   }
 
-  async updateFeedbacksService(input: FeedbackMessageType) {
+  async updateFeedbacksService(input: UpdateFeedbackMessageType) {
     try {
       return await this.repository.updateFeedback(input);
     } catch (error: any) {
@@ -62,6 +62,7 @@ class FeedbacksService {
           this.updateFeedbacksService(event.data);
           break;
         case "remove_feed_from_product":
+          console.log(event, "Inside Feeds Service (DELETE)");
           this.deleteFeedbacksService(event.data.feedId);
           break;
         default:

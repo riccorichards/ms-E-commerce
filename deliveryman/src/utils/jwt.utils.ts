@@ -35,12 +35,14 @@ export const verifyJWT = (token: string) => {
       expired: false,
       decoded,
     };
-  } catch (error: any) {
-    log.error(error.message, "Error in verify jwt");
-    return {
-      valid: false,
-      expired: error.message === "jwt expired",
-      decoded: null,
-    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        valid: false,
+        expired: error.message === "jwt expired",
+        decoded: null,
+      };
+    }
+    throw new Error("Unknown Error:" + error);
   }
 };

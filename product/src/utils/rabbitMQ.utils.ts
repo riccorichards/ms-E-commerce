@@ -45,15 +45,11 @@ export const SubscriberMessage = async (
 // publish messages
 export const PublishMessage = async (
   channel: Channel,
-  customer_binding_key: string,
+  binding_key: string,
   message: string
 ) => {
   try {
-    channel.publish(
-      config.exchange_name,
-      customer_binding_key,
-      Buffer.from(message)
-    );
+    channel.publish(config.exchange_name, binding_key, Buffer.from(message));
   } catch (error: any) {
     log.error(error);
   }

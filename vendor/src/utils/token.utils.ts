@@ -2,10 +2,23 @@ import { get } from "lodash";
 import { signWihtJWT, verifyJWT } from "./jwt.utils";
 import SessionModel from "../database/models/session.model";
 import UserModel from "../database/models/vendor.model";
-import config from "../../config/default";
 
-export const generateNewAccessToken = async (refreshToken: string) => {
-  const { decoded } = verifyJWT(refreshToken);
+type GenerateNewTokenType = {
+  token: string | null;
+  error?: string;
+};
+
+export const generateNewAccessToken = async (
+  refreshToken: string
+): Promise<GenerateNewTokenType> => {
+  const { decoded, expired, valid } = verifyJWT(refreshToken);
+
+  if (!valid) {
+    if (expired) {
+      return { token: null, error: "Expired refresh token" };
+    }
+    throw new Error("Invalid refresh token");
+  }
 
   if (!decoded || !get(decoded, "session")) {
     throw new Error("Something went wrong");
@@ -13,15 +26,20 @@ export const generateNewAccessToken = async (refreshToken: string) => {
 
   const session = await SessionModel.findById(get(decoded, "session"));
 
-  if (!session || !session.valid) return false;
+  if (!session || !session.valid) {
+    throw new Error("Invalid session");
+  }
+
   const profile = await UserModel.findOne({ _id: session.vendor }).lean();
 
-  if (!profile) return false;
+  if (!profile) {
+    throw new Error("User not found");
+  }
 
   const accessToken = signWihtJWT(
-    { vendor: session.vendor, session: session._id },
-    { expiresIn: config.accessTokenTtl }
+    { vendor: session.vendor, type: "vendor", session: session._id },
+    { expiresIn: 3600 }
   );
 
-  return accessToken;
+  return { token: accessToken, error: undefined };
 };

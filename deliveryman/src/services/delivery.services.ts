@@ -9,6 +9,8 @@ import { ProductType } from "../database/types/types.orderMenu";
 import { VendorType } from "../database/types/types.vendor";
 import { EventType } from "../database/types/type.event";
 import log from "../utils/logger";
+import { IncomingDeliveryDataType } from "../api/middleware/validation/deliveryman.validation";
+import { IncomingOrderDataType } from "../api/middleware/validation/orders.validation";
 
 class DeliveryService {
   private repository: DeliveryRepo;
@@ -17,7 +19,7 @@ class DeliveryService {
     this.repository = new DeliveryRepo();
   }
 
-  async CreateDeliveryService(input: DeliveryType) {
+  async CreateDeliveryService(input: IncomingDeliveryDataType["body"]) {
     return await this.repository.CreateDeliveryMan(input);
   }
 
@@ -32,25 +34,22 @@ class DeliveryService {
     return this.repository.UpdateDeliveryman(id, input);
   }
 
-  async CreateOrderService(input: OrderType) {
+  async CreateOrderService(input: IncomingOrderDataType["body"]) {
     return this.repository.CreateOrder(input);
+  }
+
+  async GetAllValidDeliverymanService() {
+    return this.repository.GetAllDeliverymen();
   }
 
   async AddOrderMenuService(input: ProductType[]) {
     return this.repository.AddOrderMenu(input);
   }
 
-  async AddCustomerInfoService(input: CustomerType) {
-    return this.repository.AddCustomerInfo(input);
-  }
-
-  async AddVendorInfoService(input: VendorType) {
-    return this.repository.AddvendorInfo(input);
-  }
-
   async CreateFeedbackService(input: FeedbackMessageType) {
     return this.repository.createFeedback(input);
   }
+  
   async UpdateFeedbackService(input: FeedbackMessageType) {
     return this.repository.updateFeedback(input);
   }

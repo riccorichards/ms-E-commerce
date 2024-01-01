@@ -1,11 +1,6 @@
 import multer, { FileFilterCallback } from "multer";
 import path from "path";
 
-interface UploadFileType {
-  originalname: string;
-  mimetype: string;
-}
-
 const storage = multer.memoryStorage();
 
 export const uploadFile = multer({
@@ -16,7 +11,7 @@ export const uploadFile = multer({
   },
 }).single("upload");
 
-function fileChecker(file: UploadFileType, cb: FileFilterCallback) {
+function fileChecker(file: Express.Multer.File, cb: FileFilterCallback) {
   const fileType = /jpeg|jpg|png/;
 
   const extname = fileType.test(path.extname(file.originalname).toLowerCase());

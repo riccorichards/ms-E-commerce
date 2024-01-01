@@ -5,8 +5,6 @@ export interface AddressInputType {
   street: string;
   city: string;
   country: string;
-  lat?: number;
-  lng?: number;
 }
 
 export interface AddressDocument extends AddressInputType, mongoose.Document {

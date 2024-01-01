@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { get } from "lodash";
 import { verifyJWT } from "../../utils/jwt.utils";
 import { generateNewAccessToken } from "../../utils/token.utils";
-import log from "../../utils/logger";
 
 export const deserializeUser = async (
   req: Request,
@@ -27,7 +26,6 @@ export const deserializeUser = async (
   }
 
   if (refreshToken && expired) {
-    log.info("surprise");
     try {
       const newAccessToken = await generateNewAccessToken(refreshToken);
 
@@ -35,7 +33,7 @@ export const deserializeUser = async (
         res.setHeader("x-delivery-access-token", newAccessToken);
 
         res.cookie("delivery-accessToken", newAccessToken, {
-          httpOnly: true,
+          httpOnly: false,
           path: "/",
           secure: false,
           sameSite: "strict",

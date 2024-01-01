@@ -1,6 +1,9 @@
 import log from "../../utils/logger";
 import initialize from "../initialize";
-import { FeedbackMessageType } from "../types/types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackMessageType,
+} from "../types/types.feedbacks";
 
 class FeedbacksRepo {
   async createFeedback(input: FeedbackMessageType) {
@@ -19,11 +22,11 @@ class FeedbacksRepo {
     }
   }
 
-  async updateFeedback(input: FeedbackMessageType) {
+  async updateFeedback(input: UpdateFeedbackMessageType) {
     try {
       const id = input.feedId;
       const [updatedFeeds] = await initialize.Feedbacks.update(input, {
-        where: { id },
+        where: { feedId: id },
       });
       if (updatedFeeds === 0) return log.error({ err: "No changes in rows" });
       return await initialize.Feedbacks.findByPk(id);
@@ -34,7 +37,7 @@ class FeedbacksRepo {
 
   async deleteFeedback(id: number) {
     try {
-      return await initialize.Feedbacks.destroy({ where: { id } });
+      return await initialize.Feedbacks.destroy({ where: { feedId: id } });
     } catch (error: any) {
       log.error({ err: error.message });
     }

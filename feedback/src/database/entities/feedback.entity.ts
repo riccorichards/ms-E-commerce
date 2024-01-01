@@ -14,22 +14,30 @@ class Feedbacks {
   @IsString()
   author: string;
 
+  @Column({ nullable: false })
+  @IsString()
+  authorImg: string;
+
   @Column({ nullable: true })
   @IsNumber()
   targetId: number;
 
   @Column({ nullable: true })
   @IsString()
-  forVendor: string;
+  forVendorId: string;
 
   @Column({ nullable: true })
   @IsString()
-  profileImg: string;
+  targetImg: string;
+
+  @Column()
+  @IsString()
+  targetTitle: string;
 
   @Column({ nullable: false })
   @IsString()
   @IsIn(["vendor", "product", "deliveryman"])
-  to: string;
+  address: string;
 
   @Column({ nullable: true })
   @IsString()
@@ -37,7 +45,7 @@ class Feedbacks {
 
   @Column({ nullable: true })
   @IsNumber()
-  rating: number;
+  vendorRating: number;
 }
 
 export default Feedbacks;

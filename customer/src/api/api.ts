@@ -42,22 +42,30 @@ const api = (app: Application, channel: Channel) => {
     validateIncomingData(CreateSessionSchema),
     async (req: Request, res: Response) => {
       try {
-        const session = await service.SessionService(
+        const result = await service.SessionService(
           req.body,
           req.get("user-agent") || ""
         );
 
-        if (!session) return res.status(404).json({ err: "Wrong credentials" });
+        if (!result) return res.status(404).json({ err: "Wrong credentials" });
 
         //create an access token
         const accessToken = signWihtJWT(
-          { user: session.user, session: session._id },
+          {
+            user: result.user._id,
+            type: "customer",
+            session: result.newSession._id,
+          },
           { expiresIn: 3600 }
         );
 
         //create a refresh token
         const refreshToken = signWihtJWT(
-          { user: session.user, session: session._id },
+          {
+            ser: result.user._id,
+            type: "customer",
+            session: result.newSession._id,
+          },
           { expiresIn: 86400 }
         );
 
@@ -79,7 +87,7 @@ const api = (app: Application, channel: Channel) => {
           secure: false,
         });
 
-        return res.status(201).json({ refreshToken, accessToken });
+        return res.status(201).json(omit(result.user.toJSON(), "password"));
       } catch (error) {
         log.error("Server Internal" + error);
         return res.status(500).json({ err: error, msg: "Server Internal" });
@@ -147,9 +155,9 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.put("/update-user/:userId", async (req: Request, res: Response) => {
+  app.put("/update-user", async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
+      const userId = res.locals.user.user;
       const updatedUser = await service.UpdateUserProfile(userId, req.body);
       if (!updatedUser)
         return res.status(404).json({ err: "Error with updating process" });
@@ -160,9 +168,9 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.put("/update-address/:userId", async (req: Request, res: Response) => {
+  app.put("/update-address", async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
+      const userId = res.locals.user.user;
       const updatedAddress = await service.UpdateUserAddress(userId, req.body);
       if (!updatedAddress)
         return res.status(404).json({ err: "Error with updating process" });
@@ -173,9 +181,9 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.put("/update-bank/:userId", async (req: Request, res: Response) => {
+  app.put("/update-bank", async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
+      const userId = res.locals.user.user;
       const updatedBank = await service.UpdateUserBankInfo(userId, req.body);
 
       if (!updatedBank)
@@ -187,23 +195,43 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.get("/find-user/:userId", async (req: Request, res: Response) => {
+  app.post("/check-current-password", async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
-      const user = await service.FindCustomer(userId);
-      if (!user)
-        return res.status(404).json({ err: "Error with fetching user" });
+      const userId = res.locals.user.user;
+      const result = await service.CheckCurrentPasswordService(
+        userId,
+        req.body.currentPassword
+      );
 
-      return res.status(201).json(user);
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error with password checking process" });
+      return res.status(201).json(result);
     } catch (error: any) {
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });
     }
   });
 
-  app.get("/user-spec-data/:userId", async (req: Request, res: Response) => {
+  app.get("/find-user", async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
+      const userId = res.locals.user.user;
+      log.info({ userId });
+      const user = await service.FindCustomer(userId);
+      if (!user)
+        return res.status(404).json({ err: "Error with fetching user" });
+
+      return res.status(201).json(omit(user.toJSON(), "password"));
+    } catch (error: any) {
+      log.error("Server Internal" + error);
+      return res.status(500).json({ err: error, msg: "Server Internal" });
+    }
+  });
+
+  app.get("/user-spec-data", async (req: Request, res: Response) => {
+    try {
+      const userId = res.locals.user.user;
       const field = Array.isArray(req.query.field)
         ? (req.query.field[0] as string)
         : (req.query.field as string);
@@ -224,7 +252,7 @@ const api = (app: Application, channel: Channel) => {
     try {
       res.clearCookie("refreshToken");
       res.clearCookie("accessToken");
-      return res.sendStatus(204);
+      return res.status(201).json(null);
     } catch (error: any) {
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });
@@ -247,7 +275,6 @@ const api = (app: Application, channel: Channel) => {
         { expiresIn: 3600 }
       );
 
-      console.log({ newAccessToken, note: "api" });
       res.cookie("accessToken", newAccessToken, {
         httpOnly: false,
         path: "/",

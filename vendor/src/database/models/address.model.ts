@@ -7,8 +7,6 @@ const address = new mongoose.Schema(
     postalCode: { type: String },
     city: { type: String },
     country: { type: String },
-    lat: { type: Number },
-    lng: { type: Number },
   },
   { timestamps: true }
 );

@@ -18,7 +18,11 @@ export const generateNewAccessToken = async (refreshToken: string) => {
     );
 
   const accessToken = signWihtJWT(
-    { user: session.delivery, session: session.id },
+    {
+      deliverymanId: session.delivery,
+      type: "deliveryman",
+      sessionId: session.id,
+    },
     { expiresIn: config.accessTokenTtl }
   );
 

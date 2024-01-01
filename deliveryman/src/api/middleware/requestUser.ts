@@ -7,6 +7,5 @@ export const requestUser = (
 ) => {
   const delivery = res.locals.delivery;
   if (!delivery) return res.status(403).json({ msg: "Unautorized delivery" });
-
   next();
 };

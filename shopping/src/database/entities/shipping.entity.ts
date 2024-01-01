@@ -1,4 +1,4 @@
-import { IsDate, IsEmail, IsString, Length } from "class-validator";
+import { IsEmail, IsString, Length } from "class-validator";
 import {
   Column,
   Entity,

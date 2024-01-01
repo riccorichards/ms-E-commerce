@@ -12,12 +12,10 @@ const publicKey = Buffer.from(
   "base64"
 ).toString("ascii");
 
-
 export const signWihtJWT = (
   object: Object,
   options?: jwt.SignOptions | undefined
 ) => {
-  
   return jwt.sign(object, privateKey, {
     ...(options && options),
     algorithm: "RS256",
@@ -27,7 +25,6 @@ export const signWihtJWT = (
 export const verifyJWT = (token: string) => {
   try {
     const decoded = jwt.verify(token, publicKey);
-
     if (!decoded) throw new Error("Invalid Token, (verify jwt)");
 
     return {
@@ -35,7 +32,6 @@ export const verifyJWT = (token: string) => {
       expired: false,
       decoded,
     };
-    
   } catch (error: any) {
     log.error(error.message, "Error in verify jwt");
     return {

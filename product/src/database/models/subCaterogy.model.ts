@@ -8,6 +8,7 @@ class SubCat
   public id!: number;
   public title!: string;
   public desc!: string;
+  public vendorId!: string;
   public mainCatId!: number;
   public createdAt!: Date;
 }
@@ -27,6 +28,10 @@ export const SubCatModel = (sequelize: Sequelize) => {
         allowNull: false,
       },
       desc: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      vendorId: {
         type: DataTypes.STRING,
         allowNull: false,
       },

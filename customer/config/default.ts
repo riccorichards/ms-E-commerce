@@ -11,4 +11,5 @@ export default {
   exchange_name: "exchange_name",
   product_binding_key: "path_to_customer",
   customer_queue: "customer",
+  cloud_binding_key: "path_to_cloud_brigde",
 };

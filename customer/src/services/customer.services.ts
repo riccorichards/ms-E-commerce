@@ -9,6 +9,7 @@ import {
   UpdateAddressInput,
   UpdateBankAccountType,
   UpdateUserInput,
+  UploadFileType,
 } from "../database/types/types.customer";
 import { FeedbackMessageType } from "../database/types/types.feedback";
 import { OrderMessageType } from "../database/types/types.order";
@@ -41,14 +42,6 @@ class CustomerService {
     }
   }
 
-  async CheckValidUserService(userId: string) {
-    try {
-      return await this.repository.CheckValidUser(userId);
-    } catch (error: any) {
-      throw new Error(error.message);
-    }
-  }
-  
   async UserAddress(input: AddressInputType) {
     console.log({ input, note: "Service" });
     try {
@@ -96,6 +89,22 @@ class CustomerService {
     }
   }
 
+  async UploadProfile(input: UploadFileType) {
+    try {
+      return await this.repository.UploadProfile(input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async CheckCurrentPasswordService(userId: string, password: string) {
+    try {
+      return await this.repository.CheckCurrentPassword(userId, password);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
   async FindCustomer(_id: string) {
     try {
       return await this.repository.FindCustomer(_id);
@@ -127,7 +136,6 @@ class CustomerService {
 
   async ManageCart(input: CartMessageType) {
     try {
-      console.log({ input, note: "service" });
       const addCartItem = await this.repository.AddCartItem(input);
       return addCartItem;
     } catch (error: any) {
@@ -137,7 +145,7 @@ class CustomerService {
 
   async ManageReview(input: FeedbackMessageType) {
     try {
-      const addReviewItem = await this.repository.AddReviewToProfile(input);
+      const addReviewItem = await this.repository.ManageReviewToProfile(input);
       return addReviewItem;
     } catch (error: any) {
       log.error({ err: error.message });
@@ -158,6 +166,7 @@ class CustomerService {
     log.info(
       "========================== Triggering an event ======================"
     );
+
     try {
       switch (event.type) {
         case "add_product_to_wishlist":
@@ -172,6 +181,8 @@ class CustomerService {
         case "add_feedback":
           this.ManageReview(event.data as FeedbackMessageType);
           break;
+        case "upload_profile_url":
+          this.UploadProfile(event.data as UploadFileType);
         default:
           log.info(`Unhandled event type: ${event.type}`);
       }

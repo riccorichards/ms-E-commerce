@@ -9,7 +9,9 @@ const UserSchema = new mongoose.Schema(
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    image: { type: String },
     bonus: { type: Number, default: 0 },
+    isAdmin: { type: Boolean, default: false },
     bank: { type: mongoose.Schema.Types.ObjectId, ref: "Bank" },
     address: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,8 +29,7 @@ const UserSchema = new mongoose.Schema(
     cart: [
       {
         id: { type: Number, required: true },
-        name: { type: String },
-        description: { type: String },
+        title: { type: String },
         image: { type: String },
         price: { type: String },
         unit: { type: Number, required: true },
@@ -40,14 +41,7 @@ const UserSchema = new mongoose.Schema(
         ref: "order",
       },
     ],
-    feedback: [
-      {
-        feedId: { type: Number },
-        to: { type: String },
-        review: { type: String },
-        rating: { type: Number },
-      },
-    ],
+    feedback: [{ type: mongoose.Schema.Types.ObjectId, ref: "Feedback" }],
   },
   {
     timestamps: true,
@@ -61,7 +55,6 @@ UserSchema.pre("save", async function (next) {
   if (!user?.isModified("password")) {
     return next();
   }
-
   try {
     const salt = await bcrypt.genSalt(13);
     const hash = await bcrypt.hash(user?.password, salt);

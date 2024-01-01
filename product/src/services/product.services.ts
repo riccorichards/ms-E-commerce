@@ -1,8 +1,8 @@
-import ProductRepo from "../database/repository/product.repository";
 import {
-  ProductDocsType,
-  ProductInputType,
-} from "../database/types/types.product";
+  IncomingProductType,
+  IncomingProductUpdateValidationType,
+} from "../api/middleware/validation/product.validation";
+import ProductRepo from "../database/repository/product.repository";
 import log from "../utils/logger";
 
 class ProductService {
@@ -12,7 +12,7 @@ class ProductService {
     this.repository = new ProductRepo();
   }
 
-  async createProductService(input: ProductInputType) {
+  async createProductService(input: IncomingProductType["body"]) {
     try {
       return await this.repository.createProduct(input);
     } catch (error: any) {
@@ -21,6 +21,7 @@ class ProductService {
       });
     }
   }
+
   async getProductsService() {
     try {
       return await this.repository.getProducts();
@@ -30,6 +31,16 @@ class ProductService {
       });
     }
   }
+  async getVendorsProductsService(vendorName: string) {
+    try {
+      return await this.repository.getVendorsProducts(vendorName);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+
   async getProductByIdService(id: number) {
     try {
       return await this.repository.getProductById(id);
@@ -40,7 +51,10 @@ class ProductService {
     }
   }
 
-  async updateProductService(id: number, input: ProductDocsType) {
+  async updateProductService(
+    id: number,
+    input: IncomingProductUpdateValidationType["body"]
+  ) {
     try {
       return await this.repository.updateProduct(id, input);
     } catch (error: any) {

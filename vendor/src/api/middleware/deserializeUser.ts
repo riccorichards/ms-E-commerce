@@ -21,32 +21,35 @@ export const deserializeUser = async (
   const { decoded, expired } = verifyJWT(accessToken);
 
   if (decoded) {
-    res.locals.user = decoded;
+    res.locals.vendor = decoded;
     return next();
   }
 
   if (refreshToken && expired) {
     try {
-      const newAccessToken = await generateNewAccessToken(refreshToken);
-      
+      const { token, error } = await generateNewAccessToken(refreshToken);
 
-      if (newAccessToken) {
-        res.setHeader("x-vendor-access-token", newAccessToken);
+      if (error) {
+        return res.status(401).json({ error: error });
+      }
 
-        res.cookie("vendor-accessToken", newAccessToken, {
-          httpOnly: true,
+      if (token) {
+        res.setHeader("x-vendor-access-token", token);
+
+        res.cookie("vendor-accessToken", token, {
+          httpOnly: false,
           path: "/",
           secure: false,
           sameSite: "strict",
           domain: "localhost",
         });
 
-        const result = verifyJWT(newAccessToken);
-        res.locals.user = result.decoded;
+        const result = verifyJWT(token);
+        res.locals.vendor = result.decoded;
         next();
       }
-    } catch (error: any) {
-      throw new Error(error.message);
+    } catch (error) {
+      next(error);
     }
   }
 };

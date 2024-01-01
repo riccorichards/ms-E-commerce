@@ -11,5 +11,6 @@ export const appDataSource = new DataSource({
   database: config.database,
   entities: [Feedbacks],
   synchronize: true,
+  dropSchema: false,
   logging: false,
 });

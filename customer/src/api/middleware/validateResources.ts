@@ -15,7 +15,7 @@ export const validateIncomingData =
     } catch (error) {
       if (error instanceof ZodError) {
         log.error(error.message);
-        return res.status(400).json(error.errors);
+        return res.status(404).json(error.errors);
       }
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });

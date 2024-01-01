@@ -17,7 +17,7 @@ export const generateNewAccessToken = async (refreshToken: string) => {
   if (!profile) return false;
 
   const accessToken = signWihtJWT(
-    { user: session.user, session: session._id },
+    { user: session.user, type: "customer", session: session._id },
     { expiresIn: 3600 }
   );
 

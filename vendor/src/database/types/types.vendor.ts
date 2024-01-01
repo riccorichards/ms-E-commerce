@@ -1,36 +1,32 @@
 import mongoose from "mongoose";
 
-interface galleryType {
-  image: string;
-  cover: string;
-}
-
 interface WorkingHrsType {
   workingDays: string;
   weekend: string;
 }
 
 // model for mongodb... schema's part which could recevied from the client side
-export interface VendorInput {
+export interface VendorType {
   name: string;
   ownerName: string;
   about: string;
   pincode: string;
   phone: string;
-  profileImg: string;
+  image: string;
   rating: number;
   email: string;
   password: string;
   workingHrs: WorkingHrsType;
   address: mongoose.Schema.Types.ObjectId;
   feeds: mongoose.Schema.Types.ObjectId[];
-  teamMember: mongoose.Schema.Types.ObjectId;
-  gallery: [galleryType];
-  socialMedia: [{ title: string }];
+  foods: mongoose.Schema.Types.ObjectId[];
+  teamMember: mongoose.Schema.Types.ObjectId[];
+  gallery: mongoose.Schema.Types.ObjectId[];
+  socialMedia: { title: string; url: string }[];
 }
 
 //document model for user in mongodb
-export interface VendorDocument extends VendorInput, mongoose.Document {
+export interface VendorDocument extends VendorType, mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
   comparePass(incomingPassword: string): Promise<boolean>;
@@ -38,17 +34,6 @@ export interface VendorDocument extends VendorInput, mongoose.Document {
 
 //login type
 export interface LoginInputType {
-  email: string;
-  password: string;
-}
-
-//for update profile
-export interface UpdateVendorInput {
-  name: string;
-  ownerName: string;
-  about: string;
-  pincode: string;
-  phone: string;
   email: string;
   password: string;
 }

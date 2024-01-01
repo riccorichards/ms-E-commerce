@@ -1,7 +1,6 @@
 export interface CartMessageType {
   id: number;
-  name: string;
-  description: string;
+  title: string;
   image: string;
   price: string;
   unit: number;

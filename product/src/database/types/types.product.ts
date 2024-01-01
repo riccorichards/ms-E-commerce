@@ -2,8 +2,10 @@ export interface ProductInputType {
   title: string;
   desc: string;
   price: string;
+  vendor_name: string;
+  address: string;
+  vendor_rating: number;
   image: string;
-  vendorAddres: string;
   discount: string;
   subCatId: number;
 }

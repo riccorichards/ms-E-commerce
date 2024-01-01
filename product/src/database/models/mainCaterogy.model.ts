@@ -8,6 +8,7 @@ class MainCat
   public id!: number;
   public title!: string;
   public desc!: string;
+  public image!: string;
   public createdAt?: Date;
 }
 
@@ -22,6 +23,7 @@ export const MainCatModal = (sequelize: Sequelize) => {
       },
       title: { type: DataTypes.STRING, allowNull: false, unique: true },
       desc: { type: DataTypes.STRING, allowNull: false },
+      image: { type: DataTypes.STRING, allowNull: false },
       createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     },
     { sequelize, modelName: "MainCat", timestamps: true }

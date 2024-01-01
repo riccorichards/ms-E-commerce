@@ -12,8 +12,8 @@ class FeedService {
     return await this.feedRepo.CreateFeedback(input);
   }
 
-  async GetFeedsService() {
-    return await this.feedRepo.GetFeedbacks();
+  async GetFeedsService(userId: string) {
+    return await this.feedRepo.GetFeedbacks(userId);
   }
 
   async FetFeedSevice(id: number) {

@@ -11,6 +11,6 @@ const teamMember = new mongoose.Schema(
   { timestamps: true }
 );
 
-const TeamModel = mongoose.model<TeamDocs>("team", teamMember);
+const TeamModel = mongoose.model<TeamDocs>("teamMember", teamMember);
 
 export default TeamModel;

@@ -1,15 +1,21 @@
+import { Op } from "sequelize";
+import { IncomingSubCatValidationType } from "../../api/middleware/validation/subCategory.validation";
 import log from "../../utils/logger";
 import initialize from "../initialize";
 import { SubCatInputType } from "../types/types.subCategory";
 
 class subCatRepo {
-  async createSubCut(input: SubCatInputType) {
+  async createSubCut(
+    input: IncomingSubCatValidationType["body"],
+    vendorId: string
+  ) {
     try {
-      return await initialize.SubCat.create(input);
+      return await initialize.SubCat.create({ ...input, vendorId });
     } catch (error: any) {
       log.error({ err: error.message });
     }
   }
+
   async getSubCats() {
     try {
       return await initialize.SubCat.findAll({
@@ -19,6 +25,15 @@ class subCatRepo {
       log.error({ err: error.message });
     }
   }
+
+  async getVendorsSubCats(vendorId: string) {
+    try {
+      return await initialize.SubCat.findAll({ where: { vendorId: vendorId } });
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
   async getSubCatById(id: number) {
     try {
       return await initialize.SubCat.findByPk(id, {
@@ -28,6 +43,39 @@ class subCatRepo {
       log.error({ err: error.message });
     }
   }
+
+  async getMainCatSubCats(id: number) {
+    try {
+      const result = await initialize.SubCat.findAll({
+        where: { mainCatId: id },
+        include: [{ model: initialize.Product, as: "Products" }],
+      });
+
+      return result;
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async searchFoodInSubCat(title: string, id: number) {
+    try {
+      const result = await initialize.SubCat.findByPk(id, {
+        include: [
+          {
+            model: initialize.Product,
+            as: "Products",
+            where: { title: { [Op.like]: `%${title}%` } },
+          },
+        ],
+      });
+
+      if (!result) return "Not found any matches";
+      return result;
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
   async updateSubCat(id: number, input: SubCatInputType) {
     try {
       const [updatedFeeds] = await initialize.SubCat.update(input, {
@@ -39,6 +87,7 @@ class subCatRepo {
       log.error({ err: error.message });
     }
   }
+
   async deleteSubCat(id: number) {
     try {
       return await initialize.SubCat.destroy({ where: { id } });

@@ -4,7 +4,7 @@ const addressPayload = {
   body: object({
     postalCode: string({
       required_error: "Postal code's id is required!",
-    }),
+    }).length(6, "Postal code's length should be 6"),
     street: string({
       required_error: "treet is required!",
     }),
@@ -19,19 +19,10 @@ const addressPayload = {
   }),
 };
 
-const addressParams = {
-  params: object({
-    vendorId: string({
-      required_error: "Vendor's ID is Required!",
-    }),
-  }),
-};
-
 export const CreateAddressSchema = object({
   ...addressPayload,
 });
 export const UpdateAddressSchema = object({
-  ...addressParams,
   ...addressPayload,
 });
 
