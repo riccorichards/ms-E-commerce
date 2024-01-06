@@ -38,7 +38,7 @@ export const generateNewAccessToken = async (
 
   const accessToken = signWihtJWT(
     { vendor: session.vendor, type: "vendor", session: session._id },
-    { expiresIn: 3600 }
+    { expiresIn: 60 }
   );
 
   return { token: accessToken, error: undefined };

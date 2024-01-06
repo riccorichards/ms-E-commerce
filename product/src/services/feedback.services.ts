@@ -1,6 +1,9 @@
 import { Channel, Message } from "amqplib";
 import FeedbacksRepo from "../database/repository/feedbacks.repository";
-import { FeedbackMessageType, UpdateFeedbackMessageType } from "../database/types/types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackMessageType,
+} from "../database/types/types.feedbacks";
 import log from "../utils/logger";
 import { EventType } from "../database/types/type.event";
 
@@ -62,7 +65,6 @@ class FeedbacksService {
           this.updateFeedbacksService(event.data);
           break;
         case "remove_feed_from_product":
-          console.log(event, "Inside Feeds Service (DELETE)");
           this.deleteFeedbacksService(event.data.feedId);
           break;
         default:

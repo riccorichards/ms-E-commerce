@@ -37,7 +37,7 @@ export const deserializeUser = async (
         res.setHeader("x-vendor-access-token", token);
 
         res.cookie("vendor-accessToken", token, {
-          httpOnly: false,
+          httpOnly: true,
           path: "/",
           secure: false,
           sameSite: "strict",

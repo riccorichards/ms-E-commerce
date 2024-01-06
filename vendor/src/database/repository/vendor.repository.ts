@@ -2,10 +2,13 @@ import AddressModel from "../models/address.model";
 import UserModel from "../models/vendor.model";
 import { VendorDocument } from "../types/types.vendor";
 import SessionModel from "../models/session.model";
-import { omit } from "lodash";
+import _, { omit } from "lodash";
 import VendorModel from "../models/vendor.model";
 import TeamModel from "../models/teamMember.model";
-import { FeedbackMessageType } from "../types/types.feedbacks";
+import {
+  FeedbackMessageType,
+  FeedbacksDocsType,
+} from "../types/types.feedbacks";
 import FeedsModel from "../models/feedback.model";
 import {
   CreateVendorSchemaType,
@@ -371,7 +374,125 @@ class VendorRepo {
       if (!vendor) {
         throw new Error("Vendor not found");
       }
-      return vendor;
+      return vendor.feeds;
+    } catch (error) {
+      ErrorHandler(error);
+    }
+  }
+
+  async GetVendorDashboardData(
+    id: string,
+    dashboardInput: { field: string; time: string }
+  ) {
+    try {
+      const { field, time } = dashboardInput;
+
+      if (!field || !time) {
+        throw new Error("Wrong provided queries");
+      }
+
+      const fieldtoLowerCase = field.toLowerCase();
+
+      switch (fieldtoLowerCase) {
+        case "feeds":
+          const vendor = await VendorModel.findById(id).populate(
+            fieldtoLowerCase
+          );
+
+          if (!vendor) {
+            throw new Error("Vendor not found");
+          }
+
+          switch (time) {
+            case "1D":
+              const endDate = new Date();
+              const startDate = new Date();
+              startDate.setDate(endDate.getDate() - 29);
+
+              const groupFeedsByPerDay = _.groupBy(
+                vendor.feeds,
+                (feed: FeedbacksDocsType) => {
+                  return feed.createdAt.getDate();
+                }
+              );
+
+              let transformedFeedResult = [];
+              for (
+                let i = startDate;
+                i <= endDate;
+                i.setDate(i.getDate() + 1)
+              ) {
+                const day = i.getDate();
+
+                transformedFeedResult.push({
+                  date: day,
+                  value: groupFeedsByPerDay[day]
+                    ? groupFeedsByPerDay[day].length
+                    : 0,
+                });
+              }
+
+              return transformedFeedResult;
+            case "1H":
+              const groupFeedsByPerHrs = _.groupBy(
+                vendor.feeds,
+                (feed: FeedbacksDocsType) => {
+                  return feed.createdAt.getHours();
+                }
+              );
+
+              let transformedFeedsResultByHrs = [];
+              for (let hr = 0; hr < 24; hr++) {
+                transformedFeedsResultByHrs.push({
+                  date: hr,
+                  value: groupFeedsByPerHrs[hr]
+                    ? groupFeedsByPerHrs[hr].length
+                    : 0,
+                });
+              }
+              return transformedFeedsResultByHrs;
+            case "1W":
+              const groupFeedsByPerWeek = _.groupBy(
+                vendor.feeds,
+                (feed: FeedbacksDocsType) => {
+                  return feed.createdAt.getDay();
+                }
+              );
+
+              let transformedFeedsResultByWeek = [];
+              for (let w = 1; w <= 7; w++) {
+                transformedFeedsResultByWeek.push({
+                  date: w,
+                  value: groupFeedsByPerWeek[w]
+                    ? groupFeedsByPerWeek[w].length
+                    : 0,
+                });
+              }
+              return transformedFeedsResultByWeek;
+            case "1M":
+              const groupFeedsByPerMonth = _.groupBy(
+                vendor.feeds,
+                (feed: FeedbacksDocsType) => {
+                  return feed.createdAt.getMonth();
+                }
+              );
+
+              let transformedFeedsResultByMonth = [];
+              for (let m = 0; m <= 11; m++) {
+                transformedFeedsResultByMonth.push({
+                  date: m + 1,
+                  value: groupFeedsByPerMonth[m]
+                    ? groupFeedsByPerMonth[m].length
+                    : 0,
+                });
+              }
+              return transformedFeedsResultByMonth;
+          }
+        case "earning":
+          return [{ day: null, value: null }];
+        case "orders":
+          return [{ day: null, value: null }];
+      }
     } catch (error) {
       ErrorHandler(error);
     }
@@ -399,13 +520,14 @@ class VendorRepo {
       const newFeedback = await FeedsModel.create(input);
       if (!newFeedback) throw new Error("Error while creating a new feeds");
 
-      const savedFeeds = await newFeedback.save();
       const vendor = (await VendorModel.findById(
-        input.forVendor
+        input.forVendorId
       )) as VendorDocument;
       if (!vendor) throw new Error("Error while finding the vendor");
 
-      vendor.feeds.push(savedFeeds._id);
+      const result = await newFeedback.save();
+
+      vendor.feeds.push(result._id);
 
       return await vendor.save();
     } catch (error) {

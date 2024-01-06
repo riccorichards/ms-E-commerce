@@ -43,7 +43,7 @@ class Feedbacks {
   @IsString()
   review: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "float", nullable: true })
   @IsNumber()
   vendorRating: number;
 }

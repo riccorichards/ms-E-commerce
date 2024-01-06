@@ -2,6 +2,7 @@ import amqplib, { Channel, Connection } from "amqplib";
 import config from "../../config/index";
 import log from "./logger";
 import FeedbacksService from "../services/feedback.services";
+import ProductService from "../services/product.services";
 
 // create a channel
 export const CreateChannel = async (): Promise<Channel | undefined> => {
@@ -27,14 +28,14 @@ export const SubscriberMessage = async (
   queueName: string,
   binding_key: string
 ) => {
-  const service = new FeedbacksService();
+  const Fservice = new FeedbacksService();
   const productQueue = await channel.assertQueue(queueName, { durable: true });
   channel.bindQueue(productQueue.queue, config.exchange_name, binding_key);
   channel.consume(productQueue.queue, async (msg) => {
     if (msg?.content) {
       try {
         const event = JSON.parse(msg.content.toString());
-        await service.SubscribeEvent(event, channel, msg);
+        await Fservice.SubscribeEvent(event, channel, msg);
       } catch (error: any) {
         log.error("Error with subscribe service...", error.message);
       }

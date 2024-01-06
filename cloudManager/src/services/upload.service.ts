@@ -50,6 +50,7 @@ interface GenResposeUrlWithTitleType {
   url: string;
   title: string;
 }
+
 export const GenerateImageUrl = async (
   filename: string
 ): Promise<GenResposeUrlWithTitleType> => {

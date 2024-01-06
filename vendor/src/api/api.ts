@@ -27,6 +27,7 @@ import {
   BioValidation,
   workingDaysValidation,
 } from "./middleware/validation/additional.validation";
+import { generateNewAccessToken } from "../utils/token.utils";
 const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
 
@@ -65,7 +66,7 @@ const api = (app: Application, channel: Channel) => {
         //create an access token
         const accessToken = signWihtJWT(
           { vendor: vendor._id, type: "vendor", session: newSession._id },
-          { expiresIn: 3600 }
+          { expiresIn: 1800 }
         );
 
         //create a refresh token
@@ -76,7 +77,7 @@ const api = (app: Application, channel: Channel) => {
 
         res.cookie("vendor-accessToken", accessToken, {
           maxAge: 3.154e10,
-          httpOnly: false,
+          httpOnly: true,
           domain: "localhost",
           path: "/",
           sameSite: "strict",
@@ -91,7 +92,9 @@ const api = (app: Application, channel: Channel) => {
           sameSite: "strict",
           secure: false,
         });
-        return res.status(201).json(omit(vendor.toJSON(), "password"));
+        return res
+          .status(201)
+          .json({ vendor: omit(vendor.toJSON(), "password"), ttl: 60 });
       } catch (error) {
         ApiErrorHandler(error, res);
       }
@@ -100,7 +103,7 @@ const api = (app: Application, channel: Channel) => {
 
   //get vendor's data
   app.get(
-    "/vendor-spec-data/:vendorId",
+    "/vendor-spec-data",
     [deserializeUser, requestUser],
     async (req: Request, res: Response) => {
       try {
@@ -116,7 +119,7 @@ const api = (app: Application, channel: Channel) => {
         if (vendor === null)
           return res.status(404).json({ err: "Vendor not found" });
 
-        return res.status(200).json(omit(vendor?.toJSON(), "password"));
+        return res.status(200).json(vendor);
       } catch (error) {
         ApiErrorHandler(error, res);
       }
@@ -171,6 +174,7 @@ const api = (app: Application, channel: Channel) => {
       ApiErrorHandler(error, res);
     }
   });
+
   //validate requests and creating a new token if it is necessary
   app.use([deserializeUser, requestUser]);
 
@@ -182,7 +186,36 @@ const api = (app: Application, channel: Channel) => {
       if (!vendor)
         return res.status(404).json({ err: "Error with fetching vendor" });
 
-      return res.status(201).json(omit(vendor.toJSON(), "password"));
+      return res
+        .status(201)
+        .json({ vendor: omit(vendor.toJSON(), "password"), ttl: 1800 });
+    } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  app.get("/vendor-dashboard", async (req: Request, res: Response) => {
+    try {
+      const vendorId = res.locals.vendor.vendor;
+      const { field, time } = req.query;
+
+      if (typeof field !== "string" || typeof time !== "string") {
+        return res.status(400).json({
+          err: "Invalid query parameters",
+        });
+      }
+
+      const result = await service.DashboardDataService(vendorId, {
+        field,
+        time,
+      });
+
+      if (!result)
+        return res.status(404).json({
+          err: "Error with define the result for dashboard ===>" + field,
+        });
+
+      return res.status(200).json(result);
     } catch (error) {
       ApiErrorHandler(error, res);
     }
@@ -421,6 +454,31 @@ const api = (app: Application, channel: Channel) => {
         return res.status(400).json({ msg: "Error while removing social url" });
 
       return res.status(201).json(result);
+    } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  app.post("/refresh-token", async (req: Request, res: Response) => {
+    try {
+      const refresh = req.cookies["vendor-refreshToken"];
+      if (!refresh)
+        return res.status(400).json({ msg: "Invalid Refresh Token" });
+
+      const result = await generateNewAccessToken(refresh);
+      const { token, error } = result;
+      if (error)
+        return res.status(400).json({ msg: "Error while removing social url" });
+
+      res.cookie("vendor-accessToken", token, {
+        httpOnly: true,
+        domain: "localhost",
+        path: "/",
+        sameSite: "strict",
+        secure: false,
+      });
+
+      return res.status(200).json({ ttl: 1800 });
     } catch (error) {
       ApiErrorHandler(error, res);
     }

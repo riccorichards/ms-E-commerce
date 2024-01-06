@@ -30,6 +30,10 @@ import {
   ImageMessageType,
   RemovePhotoMsg,
 } from "../database/types/type.imageUrl";
+import { get } from "lodash";
+import { Request, Response } from "express";
+import { verifyJWT } from "../utils/jwt.utils";
+import { generateNewAccessToken } from "../utils/token.utils";
 
 class VendorService {
   private repository: VendorRepo;
@@ -190,6 +194,22 @@ class VendorService {
     }
   }
 
+  async DashboardDataService(
+    id: string,
+    dashboardInput: { field: string; time: string }
+  ) {
+    try {
+      const specificData = await this.repository.GetVendorDashboardData(
+        id,
+        dashboardInput
+      );
+
+      return specificData;
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
   async GetAllvendors() {
     try {
       return await this.repository.GetAllVendor();
@@ -315,10 +335,7 @@ class VendorService {
     log.info(
       "========================== Triggering an event ======================"
     );
-    console.log(
-      event,
-      "<<<<<<<<<<<<, Inside Event ====> check what event we getting"
-    );
+
     try {
       switch (event.type) {
         case "add_feed_in_vendor":

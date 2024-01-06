@@ -1,8 +1,10 @@
+import { Channel, Message } from "amqplib";
 import {
   IncomingProductType,
   IncomingProductUpdateValidationType,
 } from "../api/middleware/validation/product.validation";
 import ProductRepo from "../database/repository/product.repository";
+import { EventType } from "../database/types/type.event";
 import log from "../utils/logger";
 
 class ProductService {

@@ -20,22 +20,23 @@ const api = async (app: Application) => {
   const channel = await CreateChannel();
 
   app.use(verifyJWT);
+
   app.post("/upload", uploadFile, async (req: Request, res: Response) => {
     try {
       const { type, isSendToService, address } = req.body;
       const file = req.file;
 
       const userId = address === "customer" ? req.user?.user : req.user?.vendor;
-
-      console.log(req.user, "<<<<<<<<<<<<<<<< Check the verified token");
       if (!file) return res.status(404).json("File Not Uploaded");
       const webPBuffer = await convertImageToWebP(file);
+
       const folderName =
         type === "foods"
           ? "foods"
           : type === "profiles"
           ? "profiles"
           : "gallery";
+
       const originalnameWthoutExtension = file.originalname.replace(
         /.[^/.]+$/,
         ""
@@ -46,13 +47,32 @@ const api = async (app: Application) => {
 
       const result = await GenerateImageUrl(webExtansion);
 
+      const targetType = { targetAddress: "", targetPath: "" };
+      switch (address) {
+        case "customer":
+          targetType.targetAddress = "upload_profile_url";
+          targetType.targetPath = config.customer_binding_key;
+          break;
+        case "vendor":
+          switch (type) {
+            case "profiles":
+              targetType.targetAddress = "upload_vendor_profile";
+              targetType.targetPath = config.vendor_binding_key;
+              break;
+            case "gallery":
+              targetType.targetAddress = "upload_vendor_gallery";
+              targetType.targetPath = config.vendor_binding_key;
+              break;
+          }
+          break;
+        case "deliveryman":
+          targetType.targetAddress = "upload_deliveryman_profile";
+          targetType.targetPath = config.deliveryman_binding_key;
+          break;
+      }
+
       const event = {
-        type:
-          address === "customer"
-            ? "upload_profile_url"
-            : type === "profiles"
-            ? "upload_vendor_profile"
-            : "upload_vendor_gallery",
+        type: targetType.targetAddress,
         data:
           type === "gallery"
             ? {
@@ -64,15 +84,10 @@ const api = async (app: Application) => {
                 userId,
               },
       };
-      console.log(event, "<<<<<<<<<<<<<<< Inside Cloud");
+
       if (!Boolean(parseInt(isSendToService))) {
         if (channel) {
-          const target =
-            address === "customer"
-              ? config.customer_binding_key
-              : config.vendor_binding_key;
-
-          PublishMessage(channel, target, JSON.stringify(event));
+          PublishMessage(channel, targetType.targetPath, JSON.stringify(event));
         }
       }
 

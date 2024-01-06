@@ -1,16 +1,21 @@
 import mongoose from "mongoose";
 
 export interface FeedbackMessageType {
+  userId: string;
   author: string;
-  profileImg?: string;
-  to: string;
-  forVendor: string;
+  authorImg: string;
+  address: "product" | "vendor" | "deliveryman";
+  targetId?: number;
+  targetTitle: string;
+  targetImg: string;
+  forVendorId: string;
+  vendor_rating: number;
   review: string;
-  rating: number;
   feedId: number;
 }
 
 export interface FeedbacksDocsType extends FeedbackMessageType {
   _id: mongoose.Schema.Types.ObjectId;
-  createdAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }

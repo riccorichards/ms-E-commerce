@@ -19,8 +19,8 @@ export interface VendorType {
   workingHrs: WorkingHrsType;
   address: mongoose.Schema.Types.ObjectId;
   feeds: mongoose.Schema.Types.ObjectId[];
-  foods: mongoose.Schema.Types.ObjectId[];
   teamMember: mongoose.Schema.Types.ObjectId[];
+  foods: mongoose.Schema.Types.ObjectId[];
   gallery: mongoose.Schema.Types.ObjectId[];
   socialMedia: { title: string; url: string }[];
 }

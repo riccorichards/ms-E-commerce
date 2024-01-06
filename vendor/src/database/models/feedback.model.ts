@@ -3,12 +3,16 @@ import { FeedbacksDocsType } from "../types/types.feedbacks";
 
 const feeds = new mongoose.Schema(
   {
+    userId: { type: String },
     author: { type: String },
-    profileImg: { type: String },
-    to: { type: String },
-    forVendor: { type: String },
+    authorImg: { type: String },
+    address: { type: String },
+    targetId: { type: Number },
+    targetTitle: { type: String },
+    targetImg: { type: String },
+    forVendorId: { type: String },
+    vendor_rating: { type: Number },
     review: { type: String },
-    rating: { type: String },
     feedId: { type: Number },
   },
   { timestamps: true }
