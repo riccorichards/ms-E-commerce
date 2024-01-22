@@ -9,4 +9,5 @@ export interface DeliveryType {
 
 export interface DeliveryDocsType extends DeliveryType {
   id: number;
+  createdAt: Date;
 }

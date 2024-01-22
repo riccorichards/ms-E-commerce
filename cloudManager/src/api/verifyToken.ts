@@ -8,6 +8,7 @@ dotenv.config();
 interface GlobalUserType {
   user: string;
   vendor: string;
+  deliverymanId: string;
 }
 
 const publicKey = Buffer.from(
@@ -17,6 +18,11 @@ const publicKey = Buffer.from(
 
 const vendorPublicKey = Buffer.from(
   process.env["VENDOR_RSA_PUBLIC_KEY"] || "",
+  "base64"
+).toString("ascii");
+
+const deliverymanPublicKey = Buffer.from(
+  process.env["DELIVERYMAN_PUBLIC_KEY"] || "",
   "base64"
 ).toString("ascii");
 
@@ -47,9 +53,8 @@ export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   try {
     const accessToken =
       get(req, "cookies.accessToken") ||
-      get(req, "headers.authorization", "").replace(/^Bearer\s/, "") ||
       get(req, "cookies.vendor-accessToken") ||
-      get(req, "headers.authorization", "").replace(/^Bearer\s/, "");
+      get(req, "cookies.delivery-accessToken");
 
     if (!accessToken) return res.status(401).json({ msg: "No token provided" });
 
@@ -58,6 +63,7 @@ export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
     if (!decodedToken) return res.status(403).json({ msg: "Invalid token" });
 
     const userType = decodedToken.type;
+
     let targetKey;
     switch (userType) {
       case "customer":
@@ -65,6 +71,9 @@ export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
         break;
       case "vendor":
         targetKey = vendorPublicKey;
+        break;
+      case "deliveryman":
+        targetKey = deliverymanPublicKey;
         break;
       default:
         return res.status(403).json({ msg: "Invalid user type" });

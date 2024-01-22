@@ -1020,3 +1020,104 @@ const food_data = [
     subCatId: 25,
   },
 ];
+
+const vendor_data = [
+  {
+    name: "Fry Fest",
+    ownerName: "Noah Smith",
+    pincode: "50005",
+    phone: "555-0550",
+    image:
+      "https://i.pinimg.com/564x/71/6b/f7/716bf783fe94c1248242ff01ee7eddf0.jpg",
+    email: "noah@fryfest.com",
+    password: "123456789",
+    confirmPassword: "123456789",
+  },
+  {
+    name: "Souper Delights",
+    ownerName: "Isabella Martinez",
+    pincode: "40004",
+    phone: "555-0440",
+    image:
+      "https://i.pinimg.com/564x/28/1c/47/281c47311f41c700b0f2e3698c1c05c7.jpg",
+    email: "isabella@souperdelights.com",
+    password: "123456789",
+    confirmPassword: "123456789",
+  },
+  {
+    name: "Ocean's Catch",
+    ownerName: "Aiden Kim",
+    pincode: "30003",
+    phone: "555-0330",
+    image:
+      "https://i.pinimg.com/564x/99/94/3d/99943dc7069917f897bd443a90cf8480.jpg",
+    email: "aiden@oceanscatch.com",
+    password: "123456789",
+    confirmPassword: "123456789",
+  },
+  {
+    name: "Burger Haven",
+    ownerName: "Emily Johnson",
+    pincode: "20002",
+    phone: "555-0220",
+    image:
+      "https://i.pinimg.com/564x/fd/82/2e/fd822e7d6f97325dfd137e875a70a776.jpg",
+    email: "emily@burgerhaven.com",
+    password: "123456789",
+    confirmPassword: "123456789",
+  },
+  {
+    name: "Mama Mia's Pizzeria",
+    ownerName: "Luca Rossi",
+    pincode: "10001",
+    phone: "555-0110",
+    image:
+      "https://i.pinimg.com/564x/2a/ac/11/2aac1140d17a51340e298cd41c999d14.jpg",
+    email: "luca@mamamiaspizzeria.com",
+    password: "123456789",
+    confirmPassword: "123456789",
+  },
+];
+
+const deliveryman_data = [
+  {
+    name: "James Fryer",
+    email: "james_fryer@fryfantasy.com",
+    password: "123456789",
+    currentAddress: "1 Ateni St, T'bilisi",
+    image:
+      "https://i.pinimg.com/564x/09/0a/38/090a3856b6b4e3812b0edae441f543b9.jpg",
+  },
+  {
+    name: "Sarah Miller",
+    email: "sarah_miller@burgerworld.com",
+    password: "123456789",
+    currentAddress: "79 Simon Chikovani St",
+    image:
+      "https://i.pinimg.com/564x/7d/86/7d/7d867d4b70822c414009848d9f821f9b.jpg",
+  },
+  {
+    name: "David Fisher",
+    email: "david_fisher@seafoodnet.com",
+    password: "123456789!",
+    currentAddress: "9 Nikolioz Kipshidze St, T'bilisi",
+    image:
+      "https://i.pinimg.com/564x/50/57/e9/5057e98447a33fe62b722f88d84130c8.jpg",
+  },
+  {
+    name: "Lily Chen",
+    email: "lily_chen@soupsphere.com",
+    password: "123456789",
+    currentAddress: "18g Tskneti St, T'bilisi",
+    image:
+      "https://i.pinimg.com/564x/e7/d6/c2/e7d6c2e5fe2c3420c373e398eceb105a.jpg",
+  },
+  {
+    name: "Marco Bianchi",
+    email: "marco_bianchi@pizzamail.com",
+    password: "123456789",
+    currentAddress: "3-5 Ilia Chavchavadze Avenue, T'bilisi",
+    image:
+      "https://i.pinimg.com/564x/97/23/4a/97234a774e3476c0eb164fadbf26f11b.jpg",
+  },
+];

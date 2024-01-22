@@ -1,14 +1,19 @@
 export interface FeedbackMessageType {
+  userId: string;
   author: string;
-  profileImg?: string;
-  to: string;
+  authorImg: string;
+  address: "product" | "vendor" | "deliveryman";
   targetId: number;
+  targetTitle: string;
+  targetImg: string;
+  forVendorId?: string;
+  vendor_rating?: number;
   review: string;
-  rating: number;
   feedId: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface FeedbacksDocsType extends FeedbackMessageType {
   id: number;
-  createdAt?: Date;
 }

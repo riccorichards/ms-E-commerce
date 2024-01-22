@@ -1,4 +1,4 @@
-import { Application, Response, Request } from "express";
+import { Application, Response, Request, query } from "express";
 import CustomerService from "../services/vendor.services";
 import { signWihtJWT, verifyJWT } from "../utils/jwt.utils";
 import config from "../../config/default";
@@ -28,6 +28,7 @@ import {
   workingDaysValidation,
 } from "./middleware/validation/additional.validation";
 import { generateNewAccessToken } from "../utils/token.utils";
+
 const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
 
@@ -94,7 +95,7 @@ const api = (app: Application, channel: Channel) => {
         });
         return res
           .status(201)
-          .json({ vendor: omit(vendor.toJSON(), "password"), ttl: 60 });
+          .json({ vendor: omit(vendor.toJSON(), "password"), ttl: 1800 });
       } catch (error) {
         ApiErrorHandler(error, res);
       }
@@ -103,18 +104,19 @@ const api = (app: Application, channel: Channel) => {
 
   //get vendor's data
   app.get(
-    "/vendor-spec-data",
+    "/vendor-feeds",
     [deserializeUser, requestUser],
     async (req: Request, res: Response) => {
       try {
         const vendorId = res.locals.vendor.vendor;
-        const field = Array.isArray(req.query.field)
-          ? (req.query.field[0] as string)
-          : (req.query.field as string);
+        const amount =
+          typeof req.query.amount === "string"
+            ? parseInt(req.query.amount, 10)
+            : 0;
 
-        if (!field) return res.status(400).json({ msg: "Bad request" });
+        if (!query) return res.status(400).json({ msg: "Bad request" });
 
-        const vendor = await service.VendorData(vendorId, field);
+        const vendor = await service.VendorDataService(vendorId, amount);
 
         if (vendor === null)
           return res.status(404).json({ err: "Vendor not found" });
@@ -175,6 +177,60 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  app.get(
+    "/vendor-feedbacks/:vendorId",
+    async (req: Request, res: Response) => {
+      try {
+        const vendorId = req.params.vendorId;
+        const page = req.query.page
+          ? parseInt(req.query.page as string, 10)
+          : null;
+
+        if (!page || isNaN(page))
+          return res.status(400).json({ error: "Invalid page number" });
+
+        const result = await service.GetVendorsFeedsService(vendorId, page);
+
+        if (!result)
+          return res.status(404).json({
+            err: "Error with fetching vendor's page based on receiving page number",
+          });
+
+        return res.status(201).json(result);
+      } catch (error) {
+        ApiErrorHandler(error, res);
+      }
+    }
+  );
+
+  app.get(
+    "/find-vendor-for-order/:address",
+    async (req: Request, res: Response) => {
+      try {
+        const address = req.params.address;
+        const vendor = await service.FindVendorForOrder(address);
+        if (!vendor)
+          return res.status(404).json({ err: "Error with fetching vendor" });
+
+        return res.status(201).json(vendor);
+      } catch (error) {
+        ApiErrorHandler(error, res);
+      }
+    }
+  );
+
+  app.get("/top-vendors", async (req: Request, res: Response) => {
+    try {
+      const topVendors = await service.GetTopVendorsService();
+      if (topVendors == null)
+        return res.status(404).json({ err: "Error with fetching vendor" });
+
+      return res.status(201).json(topVendors);
+    } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
   //validate requests and creating a new token if it is necessary
   app.use([deserializeUser, requestUser]);
 
@@ -198,7 +254,6 @@ const api = (app: Application, channel: Channel) => {
     try {
       const vendorId = res.locals.vendor.vendor;
       const { field, time } = req.query;
-
       if (typeof field !== "string" || typeof time !== "string") {
         return res.status(400).json({
           err: "Invalid query parameters",
@@ -221,30 +276,6 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  // add address into vendor
-  app.post(
-    "/address",
-    validateIncomingData(CreateAddressSchema),
-    async (req: Request, res: Response) => {
-      try {
-        const vendor = res.locals.vendor.vendor;
-        const addAddressIntoVendor = await service.VendorAddress(
-          vendor,
-          req.body
-        );
-        if (!addAddressIntoVendor)
-          return res
-            .status(404)
-            .json({ err: "Error with adding address information => (API)" });
-        return res
-          .status(201)
-          .json(omit(addAddressIntoVendor.toJSON(), "password"));
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
-    }
-  );
-
   // update vendor profile
   app.put(
     "/update-vendor",
@@ -259,26 +290,6 @@ const api = (app: Application, channel: Channel) => {
         if (!updatedUser)
           return res.status(404).json({ err: "Error with updating process" });
         return res.status(201).json(updatedUser);
-      } catch (error: any) {
-        ApiErrorHandler(error, res);
-      }
-    }
-  );
-
-  //update vendor address
-  app.put(
-    "/update-address",
-    validateIncomingData(UpdateAddressSchema),
-    async (req: Request, res: Response) => {
-      try {
-        const vendorId = res.locals.vendor.vendor;
-        const updatedAddress = await service.UpdateVendorAddress(
-          vendorId,
-          req.body
-        );
-        if (!updatedAddress)
-          return res.status(404).json({ err: "Error with updating process" });
-        return res.status(201).json(updatedAddress);
       } catch (error: any) {
         ApiErrorHandler(error, res);
       }
@@ -428,6 +439,65 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  app.get("/vendor-orders", async (req: Request, res: Response) => {
+    try {
+      const withCustomerInfo = req.query.withCustomerInfo === "true";
+
+      const vendorId = res.locals.vendor.vendor;
+      const vendorOrders = await service.GetVendorOrdersService(
+        vendorId,
+        withCustomerInfo
+      );
+      if (!vendorOrders)
+        return res
+          .status(404)
+          .json({ err: "Error with retrieve vendor with its orders" });
+
+      return res.status(200).json(vendorOrders);
+    } catch (error: any) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  app.get("/vendor-top-customers", async (req: Request, res: Response) => {
+    try {
+      const vendorId = res.locals.vendor.vendor;
+      const vendorOrders = await service.GetTopCustomersService(vendorId);
+
+      if (vendorOrders === null)
+        return res
+          .status(404)
+          .json({ err: "Error with retrieve vendor with its orders" });
+
+      return res.status(200).json(vendorOrders);
+    } catch (error: any) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  app.get(
+    "/vendor-order-items/:orderId",
+    async (req: Request, res: Response) => {
+      try {
+        const vendorId = res.locals.vendor.vendor;
+        const orderId = parseInt(req.params.orderId);
+
+        const vendorOrders = await service.GetVendorOrderItemsService(
+          vendorId,
+          orderId
+        );
+        if (!vendorOrders)
+          return res
+            .status(404)
+            .json({ err: "Error with retrieve vendor with its orders" });
+
+        return res.status(200).json(vendorOrders);
+      } catch (error: any) {
+        ApiErrorHandler(error, res);
+      }
+    }
+  );
+
   app.post(
     "/social-url",
     validateIncomingData(SocialMediaSchema),
@@ -465,10 +535,9 @@ const api = (app: Application, channel: Channel) => {
       if (!refresh)
         return res.status(400).json({ msg: "Invalid Refresh Token" });
 
-      const result = await generateNewAccessToken(refresh);
-      const { token, error } = result;
-      if (error)
-        return res.status(400).json({ msg: "Error while removing social url" });
+      const { token, error } = await generateNewAccessToken(refresh);
+
+      if (error) return res.status(401).json({ error: error });
 
       res.cookie("vendor-accessToken", token, {
         httpOnly: true,

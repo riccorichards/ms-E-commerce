@@ -1,4 +1,4 @@
-import { IsDate, IsNumber, IsString } from "class-validator";
+import { IsNumber, IsString } from "class-validator";
 import {
   Column,
   Entity,
@@ -19,19 +19,23 @@ class OrderItem {
 
   @Column()
   @IsString()
-  title: string;
+  product_name: string;
 
   @Column()
   @IsString()
-  image: string;
+  product_image: string;
+
+  @Column()
+  @IsString()
+  product_address: string;
+
+  @Column()
+  @IsString()
+  product_price: string;
 
   @Column()
   @IsNumber()
   qty: number;
-
-  @Column()
-  @IsString()
-  price: string;
 
   @ManyToOne(() => Order, (order) => order.orderItem)
   @JoinColumn({

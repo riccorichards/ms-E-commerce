@@ -15,11 +15,12 @@ const VendorSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     email: { type: String, required: true },
     password: { type: String, required: true },
-    address: { type: mongoose.Schema.Types.ObjectId, ref: "address" },
+    address: { type: String },
     teamMember: [{ type: mongoose.Schema.Types.ObjectId, ref: "teamMember" }],
     feeds: [{ type: mongoose.Schema.Types.ObjectId, ref: "feeds" }],
     foods: [{ type: mongoose.Schema.Types.ObjectId, ref: "foods" }],
     gallery: [{ type: mongoose.Schema.Types.ObjectId, ref: "gallery" }],
+    orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "orders" }],
     socialMedia: [{ title: String, url: String }],
     workingHrs: {
       workingDays: {

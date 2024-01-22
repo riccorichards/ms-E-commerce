@@ -34,16 +34,37 @@ export async function convertAddressToCoords(address: string) {
   }
 }
 
+export async function convertAddressesToCoords(addresses: string[]) {
+  try {
+    let convertedAddresses = [];
+    for (const address of addresses) {
+      const converted = await convertAddressToCoords(address);
+      if (!converted) {
+        throw new Error("Error while converting address into coords");
+      }
+      convertedAddresses.push(converted);
+    }
+    return convertedAddresses;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.message);
+    }
+    throw new Error(`Unknown Error + ${error}`);
+  }
+}
+
 //get valid deliverymen's addresses and convert they into lat & lng
 export async function getValidDeliverymen() {
   try {
     const { data } = await axios.get("http://localhost:8005/valid-deliveryman");
-    const result: { address: string; personId: number }[] = data.map(
-      (person: { address: string; personId: number }) =>
-        convertAddressToCoords(person.address).then((coords) => ({
-          ...coords,
-          personId: person.personId,
-        }))
+    const result: {
+      address: string;
+      personId: number;
+    }[] = data.map((person: { address: string; personId: number }) =>
+      convertAddressToCoords(person.address).then((coords) => ({
+        ...coords,
+        personId: person.personId,
+      }))
     );
     return Promise.all(result);
   } catch (error) {
@@ -55,21 +76,23 @@ export async function getValidDeliverymen() {
   }
 }
 
-//define the nearest deliveryman
 export async function defineBestDeliveryman(
   vendorAddresses: GeolibInputCoordinates[]
 ) {
-  //define the central place of incoming vendors' addresses
   const centralPlace = geolib.getCenter(
     vendorAddresses
   ) as GeolibInputCoordinates;
+  try {
+    const avaliableDeliverymen = (await getValidDeliverymen()) as [];
 
-  const avaliableDeliverymen = (await getValidDeliverymen()) as [];
+    const bestDeliverymenChoices = avaliableDeliverymen.sort((a, b) => {
+      const distanceToA = geolib.getDistance(centralPlace, a);
+      const distanceToB = geolib.getDistance(centralPlace, b);
+      return distanceToA - distanceToB;
+    });
 
-  const bestDeliverymenChoices = avaliableDeliverymen.sort((a, b) => {
-    const distanceToA = geolib.getDistance(centralPlace, a);
-    const distanceToB = geolib.getDistance(centralPlace, b);
-    return distanceToA - distanceToB;
-  });
-  return bestDeliverymenChoices;
+    return bestDeliverymenChoices;
+  } catch (error) {
+    throw new Error("Unknown Error" + error);
+  }
 }

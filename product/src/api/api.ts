@@ -246,14 +246,15 @@ const api = async (app: Application, channel: Channel) => {
     }
   );
 
-  app.get("/product", async (req: Request, res: Response) => {
+  app.get("/product/:page", async (req: Request, res: Response) => {
     try {
-      const products = await Pservice.getProductsService();
+      const page = parseInt(req.params.page);
+      const products = await Pservice.getProductsService(page);
       if (!products)
         return res
           .status(404)
           .json({ msg: "Error while fetching all products" });
-      return res.status(200).json(products.slice(0, 6));
+      return res.status(200).json(products);
     } catch (error) {
       ApiErrorHandler(res, error);
     }
@@ -264,6 +265,7 @@ const api = async (app: Application, channel: Channel) => {
     async (req: Request, res: Response) => {
       try {
         const vendorName = req.params.vendorName;
+
         const products = await Pservice.getVendorsProductsService(vendorName);
         if (!products)
           return res
@@ -276,13 +278,14 @@ const api = async (app: Application, channel: Channel) => {
     }
   );
 
-  app.get("/product/:id", async (req: Request, res: Response) => {
+  app.get("/foods-length", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const product = await Pservice.getProductByIdService(id);
-      if (!product)
-        return res.status(404).json({ msg: "Error while fetching a product" });
-      return res.status(200).json(product);
+      const products = await Pservice.getFoodsLengthService();
+      if (!products)
+        return res
+          .status(404)
+          .json({ msg: "Error while fetching all products" });
+      return res.status(200).json(products);
     } catch (error) {
       ApiErrorHandler(res, error);
     }
@@ -417,7 +420,7 @@ const api = async (app: Application, channel: Channel) => {
       const product = await Pservice.getProductByIdService(productId);
       if (!product) return res.status(404).json({ msg: "Not found product" });
 
-      const { id, image, title, price } = product;
+      const { id, image, title, price, address } = product;
       const event = {
         type: "add_product_to_cart",
         data: {
@@ -426,6 +429,7 @@ const api = async (app: Application, channel: Channel) => {
           title,
           image,
           price,
+          address,
           unit,
         },
       };
@@ -436,7 +440,7 @@ const api = async (app: Application, channel: Channel) => {
           config.customer_binding_key,
           JSON.stringify(event)
         );
-        return res.status(201).json({ id, title, image, price, unit });
+        return res.status(201).json({ id, title, image, price, address, unit });
       } else {
         return res.status(503).json({ msg: "Service Unavailable" });
       }

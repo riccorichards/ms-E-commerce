@@ -19,7 +19,6 @@ export const deserializeUser = async (
   if (!accessToken) return next();
 
   const { decoded, expired } = verifyJWT(accessToken);
-
   if (decoded) {
     res.locals.delivery = decoded;
     return next();
@@ -27,20 +26,22 @@ export const deserializeUser = async (
 
   if (refreshToken && expired) {
     try {
-      const newAccessToken = await generateNewAccessToken(refreshToken);
+      const { token, error } = await generateNewAccessToken(refreshToken);
 
-      if (newAccessToken) {
-        res.setHeader("x-delivery-access-token", newAccessToken);
+      if (error) {
+        return res.status(401).json({ error: error });
+      }
 
-        res.cookie("delivery-accessToken", newAccessToken, {
-          httpOnly: false,
+      if (token) {
+        res.cookie("delivery-accessToken", token, {
+          httpOnly: true,
           path: "/",
           secure: false,
           sameSite: "strict",
           domain: "localhost",
         });
 
-        const result = verifyJWT(newAccessToken);
+        const result = verifyJWT(token);
         res.locals.delivery = result.decoded;
         next();
       }

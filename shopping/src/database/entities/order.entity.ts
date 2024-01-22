@@ -8,11 +8,8 @@ import {
   UpdateDateColumn,
   JoinColumn,
 } from "typeorm";
-import { IsEmail, IsString, Length } from "class-validator";
+import { IsNumber, IsString, Length } from "class-validator";
 import OrderItem from "./orderItem.entity";
-import Invoice from "./invoice.entity";
-import Deliveryman from "./deliveryman.entity";
-import Vendor from "./vendor.entity";
 
 @Entity("orders")
 class Order {
@@ -21,64 +18,26 @@ class Order {
 
   @Column()
   @IsString()
-  @Length(5, 100)
-  username: string;
-
-  @Column()
-  @IsString()
-  @IsEmail()
-  @Length(5, 100)
-  email: string;
-
-  @Column()
-  @IsString()
-  @IsEmail()
-  @Length(5, 100)
-  customerAddress: string;
-
-  @Column()
-  @IsString()
+  @Length(3, 15)
   order_status: string;
 
-  @Column()
-  @IsString()
-  distance: string;
-
-  @Column()
-  @IsString()
-  duration: string;
+  @Column({ type: "float" })
+  @IsNumber()
+  total_amount: number;
 
   @Column({ nullable: true })
   @IsString()
-  total_amount: string;
+  deliverymanName: string;
 
-  @Column({ nullable: true })
+  @Column()
   @IsString()
-  note: string;
+  customerId: string;
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
   orderItem: OrderItem[];
 
-  @OneToOne(() => Invoice, (invoice) => invoice.order)
-  invoice: Invoice;
-
-  @OneToOne(() => Deliveryman, { cascade: true })
-  @JoinColumn({
-    name: "deliveryman_id",
-  })
-  deliverymna: Deliveryman;
-
-  @OneToOne(() => Vendor, { cascade: true })
-  @JoinColumn({
-    name: "vendor_id",
-  })
-  vendor: Vendor;
-
   @CreateDateColumn()
   createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }
 
 export default Order;

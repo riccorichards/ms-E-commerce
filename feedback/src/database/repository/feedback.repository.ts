@@ -8,7 +8,6 @@ class FeedbackRepo {
 
   async CreateFeedback(input: FeedbackValidation) {
     try {
-
       const newFeed = this.repository.create(input);
       await this.repository.save(newFeed);
 
@@ -16,7 +15,6 @@ class FeedbackRepo {
         throw new Error("Error while creating a new feed (in repo)");
 
       return newFeed;
-      
     } catch (error: any) {
       log.error(error);
     }
@@ -32,12 +30,11 @@ class FeedbackRepo {
     }
   }
 
-  async GetFeedback(id: number) {
+  async GetFeedbacksLength() {
     try {
-      const feedback = this.repository.findBy({ id: id });
-      if (!feedback)
-        throw new Error("Error while fetching feed by id (in repo)");
-      return feedback;
+      const feedbacks = (await this.repository.find()).length;
+      if (!feedbacks) throw new Error("Error while fetching feeds (in repo)");
+      return feedbacks;
     } catch (error: any) {
       log.error(error);
     }
@@ -54,7 +51,7 @@ class FeedbackRepo {
       await this.repository.update(id, input);
 
       const updatedFeedback = await this.repository.findOneBy({ id });
-      
+
       if (!updatedFeedback)
         throw new Error("Error while updating feed (in repo)");
       return updatedFeedback;
@@ -63,6 +60,7 @@ class FeedbackRepo {
       throw error;
     }
   }
+
 
   async RemoveFeedback(id: number) {
     try {

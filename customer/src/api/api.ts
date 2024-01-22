@@ -14,7 +14,6 @@ import { CreateSessionSchema } from "./middleware/validation/session.validation"
 import { CreateAddressSchema } from "./middleware/validation/address.validation";
 import { CreateBankAccSchema } from "./middleware/validation/bankAcc.validation";
 import { generateNewAccessToken } from "../utils/token.utils";
-import SessionModel from "../database/models/session.model";
 
 const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
@@ -56,17 +55,17 @@ const api = (app: Application, channel: Channel) => {
             type: "customer",
             session: result.newSession._id,
           },
-          { expiresIn: 3600 }
+          { expiresIn: 1800 }
         );
 
         //create a refresh token
         const refreshToken = signWihtJWT(
           {
-            ser: result.user._id,
+            user: result.user._id,
             type: "customer",
             session: result.newSession._id,
           },
-          { expiresIn: 86400 }
+          { expiresIn: 2592000 }
         );
 
         res.cookie("accessToken", accessToken, {
@@ -87,7 +86,10 @@ const api = (app: Application, channel: Channel) => {
           secure: false,
         });
 
-        return res.status(201).json(omit(result.user.toJSON(), "password"));
+        return res.status(201).json({
+          customer: omit(result.user.toJSON(), "password"),
+          ttl: 1800,
+        });
       } catch (error) {
         log.error("Server Internal" + error);
         return res.status(500).json({ err: error, msg: "Server Internal" });
@@ -132,9 +134,41 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
+  app.get(
+    "/order-customer-info/:customerId",
+    async (req: Request, res: Response) => {
+      try {
+        const { customerId } = req.params;
+        const result = await service.GetCustomerInfoByIdService(customerId);
+        if (!result)
+          return res
+            .status(400)
+            .json({ msg: "Customer was not found on that ID" });
+        return res.status(200).json(result);
+      } catch (error) {
+        log.error("Server Internal" + error);
+        return res.status(500).json({ err: error, msg: "Server Internal" });
+      }
+    }
+  );
+
+  app.get("/customers-length", async (req: Request, res: Response) => {
+    try {
+      const result = await service.GetCustomersLengthService();
+      if (!result)
+        return res
+          .status(400)
+          .json({ msg: "Customer was not found on that ID" });
+      return res.status(200).json(result);
+    } catch (error) {
+      log.error("Server Internal" + error);
+      return res.status(500).json({ err: error, msg: "Server Internal" });
+    }
+  });
+
   app.use([deserializeUser, requestUser]);
 
-  app.post("/generate-new-token", (req: Request, res: Response) => {
+  app.post("/generate-new-token", async (req: Request, res: Response) => {
     try {
       const refreshToken =
         get(req, "cookies.refreshToken") ||
@@ -161,7 +195,9 @@ const api = (app: Application, channel: Channel) => {
       const updatedUser = await service.UpdateUserProfile(userId, req.body);
       if (!updatedUser)
         return res.status(404).json({ err: "Error with updating process" });
-      return res.status(201).json(omit(updatedUser.toJSON(), "password"));
+      return res
+        .status(201)
+        .json({ customer: omit(updatedUser.toJSON(), "password"), ttl: 1800 });
     } catch (error: any) {
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });
@@ -217,31 +253,34 @@ const api = (app: Application, channel: Channel) => {
   app.get("/find-user", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
-      log.info({ userId });
       const user = await service.FindCustomer(userId);
       if (!user)
         return res.status(404).json({ err: "Error with fetching user" });
 
-      return res.status(201).json(omit(user.toJSON(), "password"));
+      return res
+        .status(201)
+        .json({ customer: omit(user.toJSON(), "password"), ttl: 1800 });
     } catch (error: any) {
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });
     }
   });
 
-  app.get("/user-spec-data", async (req: Request, res: Response) => {
+  app.get("/customer-feeds", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
-      const field = Array.isArray(req.query.field)
-        ? (req.query.field[0] as string)
-        : (req.query.field as string);
+      const page =
+        typeof req.query.page === "string"
+          ? parseInt(req.query.page, 10)
+          : undefined;
 
-      if (!field) return res.status(400).json({ msg: "Bad request" });
+      if (!page) return res.status(400).json({ msg: "Bad request" });
+      const result = await service.CustomerFeedsService(userId, page);
 
-      const user = await service.CustomerData(userId, field);
+      if (!result)
+        return res.status(404).json({ err: "Error while fetching feedbacks" });
 
-      if (!user) return res.status(404).json({ err: "User not found" });
-      return res.status(200).json(user);
+      return res.status(200).json(result);
     } catch (error: any) {
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });
@@ -259,36 +298,28 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.post("/refresh", async (req: Request, res: Response) => {
+  app.post("/refresh-token", async (req: Request, res: Response) => {
     try {
-      const refreshToken =
-        get(req, "cookies.refreshToken") ||
-        (get(req, "headers.x-refresh") as string);
+      const refresh = req.cookies["refreshToken"];
+      if (!refresh)
+        return res.status(400).json({ msg: "Invalid Refresh Token" });
 
-      if (!refreshToken) return res.status(403).json("Not Provided Token");
+      const { token, error } = await generateNewAccessToken(refresh);
 
-      const token = res.locals.user;
-      const session = await SessionModel.findById(token.session);
+      if (error) return res.status(401).json({ error: error });
 
-      const newAccessToken = signWihtJWT(
-        { user: token.user, session: session?._id },
-        { expiresIn: 3600 }
-      );
-
-      res.cookie("accessToken", newAccessToken, {
-        httpOnly: false,
-        path: "/",
-        secure: false,
-        sameSite: "strict",
+      res.cookie("accessToken", token, {
+        httpOnly: true,
         domain: "localhost",
+        path: "/",
+        sameSite: "strict",
+        secure: false,
       });
 
-      return res.status(201).json(newAccessToken);
+      return res.status(200).json({ ttl: 1800 });
     } catch (error) {
-      if (error instanceof Error) {
-        log.error("Error while creating a new accesstoken =>" + error.message);
-        return res.status(400).json(error.message);
-      }
+      log.error("Server Internal" + error);
+      return res.status(500).json({ err: error, msg: "Server Internal" });
     }
   });
 };

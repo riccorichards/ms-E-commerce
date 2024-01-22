@@ -1,8 +1,5 @@
 import { Channel, Message } from "amqplib";
-import { AddressInputType } from "../database/types/type.address";
 import { EventType } from "../database/types/type.event";
-import { TeamMemberType } from "../database/types/type.teamMember";
-import { LoginInputType } from "../database/types/types.vendor";
 import log from "../utils/logger";
 import { FeedbackMessageType } from "../database/types/types.feedbacks";
 import VendorRepo from "../database/repository/vendor.repository";
@@ -10,10 +7,6 @@ import {
   CreateVendorSchemaType,
   UpdateVendorSchemaType,
 } from "../api/middleware/validation/vendor.validation";
-import {
-  CreateAddressSchemaType,
-  UpdateAddressSchemaType,
-} from "../api/middleware/validation/address.validation";
 import { CreateSessionSchemaType } from "../api/middleware/validation/session.validation";
 import {
   CreateTeamMemberSchemaType,
@@ -30,10 +23,7 @@ import {
   ImageMessageType,
   RemovePhotoMsg,
 } from "../database/types/type.imageUrl";
-import { get } from "lodash";
-import { Request, Response } from "express";
-import { verifyJWT } from "../utils/jwt.utils";
-import { generateNewAccessToken } from "../utils/token.utils";
+import { MessageOrderType } from "../database/types/type.order";
 
 class VendorService {
   private repository: VendorRepo;
@@ -59,20 +49,6 @@ class VendorService {
       return await this.repository.CreateSession(input, userAgent);
     } catch (error: any) {
       throw new Error(error.message);
-    }
-  }
-
-  async VendorAddress(
-    vendorId: string,
-    input: CreateAddressSchemaType["body"]
-  ) {
-    try {
-      const newAddress = await this.repository.AddAddress(vendorId, input);
-      return newAddress
-        ? newAddress
-        : log.error({ err: "Error with added User address" });
-    } catch (error: any) {
-      log.error({ err: error.message });
     }
   }
 
@@ -103,17 +79,6 @@ class VendorService {
   async UpdateVendorProfile(id: string, input: CreateVendorSchemaType["body"]) {
     try {
       return await this.repository.UpdateVendorProfile(id, input);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-
-  async UpdateVendorAddress(
-    id: string,
-    input: UpdateAddressSchemaType["body"]
-  ) {
-    try {
-      return await this.repository.UpdateVendorAddress(id, input);
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -181,12 +146,49 @@ class VendorService {
     }
   }
 
-  async VendorData(id: string, fieldToPopulated: string) {
+  async GetVendorOrdersService(id: string, withCustomerInfo: boolean) {
     try {
-      const specificData = await this.repository.GetVendorSpecificData(
-        id,
-        fieldToPopulated
-      );
+      return await this.repository.GetVendorOrders(id, withCustomerInfo);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetVendorsFeedsService(vendorId: string, page: number) {
+    try {
+      return await this.repository.GetVendorsFeeds(vendorId, page);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetTopVendorsService() {
+    try {
+      return await this.repository.GetTopVendors();
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetTopCustomersService(id: string) {
+    try {
+      return await this.repository.GetTopCustomers(id);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetVendorOrderItemsService(id: string, orderId: number) {
+    try {
+      return await this.repository.GetVendorOrderItems(id, orderId);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async VendorDataService(id: string, amount: number) {
+    try {
+      const specificData = await this.repository.VendorData(id, amount);
 
       return specificData;
     } catch (error: any) {
@@ -226,9 +228,26 @@ class VendorService {
     }
   }
 
+  async FindVendorForOrder(vendorId: string) {
+    try {
+      return await this.repository.VendorForOrder(vendorId);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
   async createFeedbacksService(input: FeedbackMessageType) {
     try {
       return await this.repository.createNewFeeds(input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+
+  async addNewOrderForVendorService(input: MessageOrderType) {
+    try {
+      return await this.repository.createNewOrder(input);
     } catch (error: any) {
       log.error({ err: error.message });
       throw new Error(error.message);
@@ -350,6 +369,9 @@ class VendorService {
           break;
         case "add_food_in_vendor":
           this.createFoodService(event.data as FoodMessageType);
+          break;
+        case "new_order_for_vendor":
+          this.addNewOrderForVendorService(event.data as MessageOrderType);
           break;
         case "update_food_in_vendor":
           this.updatefoodService(event.data as FoodMessageType);

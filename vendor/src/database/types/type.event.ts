@@ -4,6 +4,7 @@ import {
   ImageMessageType,
   RemovePhotoMsg,
 } from "./type.imageUrl";
+import { MessageOrderType } from "./type.order";
 import { FeedbackMessageType } from "./types.feedbacks";
 
 export interface EventType {
@@ -13,5 +14,6 @@ export interface EventType {
     | FoodMessageType
     | ImageMessageType
     | GalleryMessageType
-    | RemovePhotoMsg;
+    | RemovePhotoMsg
+    | MessageOrderType;
 }

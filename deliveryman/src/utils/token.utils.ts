@@ -1,21 +1,32 @@
 import { get } from "lodash";
 import { signWihtJWT, verifyJWT } from "./jwt.utils";
-import config from "../../config/index";
 import initialize from "../database/initialize";
 
 export const generateNewAccessToken = async (refreshToken: string) => {
-  const { decoded } = verifyJWT(refreshToken);
+  const { decoded, valid, expired } = verifyJWT(refreshToken);
 
-  if (!decoded || !get(decoded, "session")) {
+  if (!valid) {
+    if (expired) {
+      return { token: null, error: "Expired refresh token" };
+    }
+    throw new Error("Invalid refresh token");
+  }
+
+  if (!decoded || !get(decoded, "sessionId")) {
     throw new Error("Something went wrong");
   }
 
-  const session = await initialize.Session.findByPk(get(decoded, "session"));
+  const session = await initialize.Session.findByPk(get(decoded, "sessionId"));
 
-  if (!session)
-    throw new Error(
-      "Error while retrieving the session ================ in generateNewAccessToken"
-    );
+  if (!session || !session.isValid) {
+    throw new Error("Invalid session");
+  }
+
+  const profile = await initialize.Delivery.findByPk(session.delivery);
+
+  if (!profile) {
+    throw new Error("User not found");
+  }
 
   const accessToken = signWihtJWT(
     {
@@ -23,8 +34,8 @@ export const generateNewAccessToken = async (refreshToken: string) => {
       type: "deliveryman",
       sessionId: session.id,
     },
-    { expiresIn: config.accessTokenTtl }
+    { expiresIn: 1800 }
   );
 
-  return accessToken;
+  return { token: accessToken, error: undefined };
 };

@@ -1,236 +1,227 @@
 import { Application, Request, Response } from "express";
-import log from "../utils/logger";
 import {
-  AddressInputValidation,
   OrderInputValidation,
-  OrderItemInputValidation,
-  PaymentInputValidation,
   ShippingInputValidation,
-  TransactionInputValidation,
-} from "../database/validation/shopping.validation";
-import { validate } from "class-validator";
+} from "./validation/shopping.validation";
 import ShoppingService from "../services/shopping.service";
 import ShoppingRepo from "../database/repository/shopping.repository";
 import initialiazeRepo from "../database/repository/initialiaze.repo";
 import { verifyJWT } from "./verifyToken";
+import ErrorHandler, { ValidateIncomingData } from "./ErrorHandler";
+import { CreateChannel, PublishMessage } from "../utils/rabbitMQ.utils";
+import config from "../../config";
+import _ from "lodash";
+import { makeRequestWithRetries } from "../utils/makeRequestWithRetries";
 
-const api = (app: Application) => {
+const api = async (app: Application) => {
   const shoppingRepo = new ShoppingRepo(
     initialiazeRepo.orderRepository,
-    initialiazeRepo.orderIteRepository,
     initialiazeRepo.shippingRepository,
-    initialiazeRepo.addressRepository,
-    initialiazeRepo.transactionRepository,
-    initialiazeRepo.paymentRepository
+    initialiazeRepo.orderIteRepository
   );
 
   const service = new ShoppingService(shoppingRepo);
+
+  const channel = await CreateChannel();
+
+  app.get(
+    "/deliveryman-orders/:deliveryName",
+    async (req: Request, res: Response) => {
+      try {
+        const { deliveryName } = req.params;
+        const orders = await service.GetOrdersByDeliveryNameService(
+          deliveryName
+        );
+        return res.status(200).json(orders);
+      } catch (error) {
+        ErrorHandler(error, res);
+      }
+    }
+  );
 
   app.use(verifyJWT);
 
   app.post(
     "/order",
-    async (req: Request<{}, {}, OrderInputValidation>, res: Response) => {
+    ValidateIncomingData(OrderInputValidation),
+    async (req: Request, res: Response) => {
       try {
-        const errors = (await validate(req.body)) as any;
-        if (errors.length > 0) {
-          const message = errors
-            .map((error: any) => Object.values(error.constraints))
-            .join(", ");
-          throw new Error(message);
-        }
-
         const newOrder = await service.CreateOrderService(req.body);
         if (!newOrder)
           return res
             .status(404)
             .json({ msg: "Error while creating a new order" });
+
+        const event = {
+          type: "empty_cart",
+          data: { userId: req.body.customerId },
+        };
+        if (channel) {
+          PublishMessage(
+            channel,
+            config.customer_binding_key,
+            JSON.stringify(event)
+          );
+        }
         return res.status(201).json(newOrder);
-      } catch (error: any) {
-        log.error(error.message);
-      }
-    }
-  );
-
-  app.post(
-    "/order-item/:id",
-    async (
-      req: Request<{ id: string }, {}, OrderItemInputValidation[]>,
-      res: Response
-    ) => {
-      const id = parseInt(req.params.id);
-      try {
-        let validationError = [];
-        for (const itemInput of req.body) {
-          const errors = await validate(itemInput);
-          if (errors.length > 0) {
-            validationError.push(...errors);
-          }
-        }
-
-        if (validationError.length > 0) {
-          log.error(validationError);
-          throw new Error("Validation failed");
-        }
-
-        const orderWithItems = await service.CreateOrderItemService(
-          id,
-          req.body
-        );
-        if (!orderWithItems)
-          return res
-            .status(404)
-            .json({ msg: "Error while adding an items is the order" });
-        return res.status(201).json(orderWithItems);
-      } catch (error: any) {
-        log.error(error.message);
+      } catch (error) {
+        ErrorHandler(error, res);
       }
     }
   );
 
   app.post(
     "/shipping",
-    async (req: Request<{}, {}, ShippingInputValidation>, res: Response) => {
+    ValidateIncomingData(ShippingInputValidation),
+    async (req: Request, res: Response) => {
       try {
-        const errors = (await validate(req.body)) as any;
-        if (errors.length > 0) {
-          const message = errors
-            .map((error: any) => Object.values(error.constraints))
-            .join(", ");
-          throw new Error(message);
-        }
-        const newShipping = await service.CreateShippingService(req.body);
+        const order = await service.CreateShippingService(req.body);
 
-        if (!newShipping)
+        if (!order)
           return res
             .status(404)
             .json({ msg: "Error while creating a new shipping" });
-        return res.status(201).json(newShipping);
-      } catch (error: any) {
-        log.error(error.message);
-      }
-    }
-  );
 
-  app.post(
-    "/shipping/:id",
-    async (
-      req: Request<{ id: string }, {}, AddressInputValidation>,
-      res: Response
-    ) => {
-      try {
-        const id = parseInt(req.params.id);
-        const errors = (await validate(req.body)) as any;
-        if (errors.length > 0) {
-          const message = errors
-            .map((error: any) => Object.values(error.constraints))
-            .join(", ");
-          throw new Error(message);
+        if (order.order_status === "complete") {
+          const { id, createdAt, total_amount, ...other } = order;
+          const groupItemsBasedOnAddress = _.groupBy(
+            order.orderItem,
+            "product_address"
+          );
+          _.forEach(
+            groupItemsBasedOnAddress,
+            (itemForVendor, vendorAddress) => {
+              const calcTotalPrice = itemForVendor.reduce(
+                (acc, item) => acc + parseFloat(item.product_price),
+                0
+              );
+
+              const event = {
+                type: "new_order_for_vendor",
+                data: {
+                  order: {
+                    ...other,
+                    orderId: id,
+                    orderItem: itemForVendor,
+                    total_amount: calcTotalPrice,
+                  },
+                  vendor_address: vendorAddress,
+                },
+              };
+              if (channel) {
+                PublishMessage(
+                  channel,
+                  config.vendor_binding_key,
+                  JSON.stringify(event)
+                );
+              }
+            }
+          );
+
+          if (channel) {
+            const url = `http://localhost:8001/order-customer-info/${order.customerId}`;
+            const customer = await makeRequestWithRetries(url, "GET");
+            if (!customer)
+              return res.status(400).json({ msg: "Customer was not found..." });
+
+            const event = {
+              type: "new_order",
+              data: { ...order, customer },
+            };
+
+            PublishMessage(
+              channel,
+              config.deliveryman_binding_key,
+              JSON.stringify(event)
+            );
+          }
+          return res.status(201).json(order);
         }
-
-        const shippingWithAddress = await service.CreateAddressService(
-          id,
-          req.body
-        );
-        if (!shippingWithAddress)
-          return res
-            .status(404)
-            .json({ msg: "Error while adding an address into shipping" });
-        return res.status(201).json(shippingWithAddress);
-      } catch (error: any) {
-        log.error(error.message);
+      } catch (error) {
+        ErrorHandler(error, res);
       }
     }
   );
 
-  app.post(
-    "/transaction/:id",
-    async (
-      req: Request<{ id: string }, {}, TransactionInputValidation>,
-      res: Response
-    ) => {
-      try {
-        const orderId = parseInt(req.params.id);
-        const errors = (await validate(req.body)) as any;
-        if (errors.length > 0) {
-          const message = errors
-            .map((error: any) => Object.values(error.constraints))
-            .join(", ");
-          throw new Error(message);
+  app.get("/orders-list", async (req: Request, res: Response) => {
+    try {
+      if (req.user) {
+        const customerId = req.user.user;
+        let page: number | string | undefined = undefined;
+        if (typeof req.query.page === "string") {
+          page = parseInt(req.query.page);
         }
-        const newTransaction = await service.CreateTransactionService(
-          orderId,
-          req.body
-        );
-        if (!newTransaction)
-          return res
-            .status(404)
-            .json({ msg: "Error while creating a new transaction" });
-        return res.status(201).json(newTransaction);
-      } catch (error: any) {
-        log.error(error.message);
+        const orderList = await service.GetOrdersListService(customerId, page);
+        return res.status(200).json(orderList);
       }
+    } catch (error) {
+      ErrorHandler(error, res);
     }
-  );
+  });
 
-  app.post(
-    "/payment",
-    async (req: Request<{}, {}, PaymentInputValidation>, res: Response) => {
-      try {
-        const errors = (await validate(req.body)) as any;
-        if (errors.length > 0) {
-          const message = errors
-            .map((error: any) => Object.values(error.constraints))
-            .join(", ");
-          throw new Error(message);
-        }
-        const newPayment = await service.CreatePayloadService(req.body);
-        if (!newPayment)
-          return res
-            .status(404)
-            .json({ msg: "Error whilee creating a new payment" });
-        return res.status(201).json(newPayment);
-      } catch (error: any) {
-        log.error(error.message);
-      }
+  app.get("/orders", async (req: Request, res: Response) => {
+    try {
+      const orders = await service.GetOrdersService();
+      return res.status(200).json(orders);
+    } catch (error) {
+      ErrorHandler(error, res);
     }
-  );
+  });
 
-  app.get(
-    "/payment",
-    async (req: Request<{}, {}, PaymentInputValidation>, res: Response) => {
-      try {
-        const errors = (await validate(req.body)) as any;
-        if (errors.length > 0) {
-          const message = errors
-            .map((error: any) => Object.values(error.constraints))
-            .join(", ");
-          throw new Error(message);
-        }
-        const payments = await service.GetAllPaymentsService();
-        if (!payments)
-          return res
-            .status(404)
-            .json({ msg: "Error while creating a new payments" });
-        return res.status(200).json(payments);
-      } catch (error: any) {
-        log.error(error.message);
-      }
+  app.get("/orders-data", async (req: Request, res: Response) => {
+    try {
+      const orderData = await service.GetOrdersDataService();
+      return res.status(200).json(orderData);
+    } catch (error) {
+      ErrorHandler(error, res);
     }
-  );
+  });
 
-  app.get(
-    "/payment/:id",
-    async (req: Request<{ id: string }>, res: Response) => {
-      try {
-        const id = parseInt(req.params.id);
-        const payment = await service.GetPaymentByIdService(id);
-        return res.status(200).json(payment);
-      } catch (error: any) {
-        log.error(error.message);
-      }
+  app.get("/order/:orderId", async (req: Request, res: Response) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const result = await service.GetOrderByIdService(orderId);
+      return res.status(200).json(result);
+    } catch (error) {
+      ErrorHandler(error, res);
     }
-  );
+  });
+
+  app.get("/popular-foods", async (req: Request, res: Response) => {
+    try {
+      const result = await service.GetPopularFoodsService();
+      return res.status(200).json(result);
+    } catch (error) {
+      ErrorHandler(error, res);
+    }
+  });
+
+  app.get("/top-customers", async (req: Request, res: Response) => {
+    try {
+      const result = await service.GetTopCustomersService();
+      if (!result)
+        return res
+          .status(400)
+          .json({ msg: "Customer was not found on that ID" });
+      return res.status(200).json(result);
+    } catch (error) {
+      ErrorHandler(error, res);
+    }
+  });
+
+  app.delete("/cancel-order/:orderId", async (req: Request, res: Response) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      if (!orderId) return res.status(400).json({ msg: "Invalid Order's ID" });
+      const removedOrder = await service.CancelOrderService(orderId);
+      if (!removedOrder)
+        return res.status(400).json({ msg: "Failed to delete order" });
+
+      return res.status(201).json(null);
+    } catch (error) {
+      ErrorHandler(error, res);
+    }
+  });
 };
 
 export default api;

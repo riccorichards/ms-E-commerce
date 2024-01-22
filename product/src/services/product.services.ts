@@ -24,18 +24,28 @@ class ProductService {
     }
   }
 
-  async getProductsService() {
+  async getProductsService(page: number) {
     try {
-      return await this.repository.getProducts();
+      return await this.repository.getProducts(page);
     } catch (error: any) {
       log.error({
         err: error.message,
       });
     }
   }
+
   async getVendorsProductsService(vendorName: string) {
     try {
       return await this.repository.getVendorsProducts(vendorName);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+  async getFoodsLengthService() {
+    try {
+      return await this.repository.getFoodsLength();
     } catch (error: any) {
       log.error({
         err: error.message,

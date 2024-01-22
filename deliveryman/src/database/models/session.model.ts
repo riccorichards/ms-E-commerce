@@ -6,7 +6,8 @@ class Session
   implements SessionType
 {
   public id!: number;
-  public delivery!: string;
+  public delivery!: number;
+  public isValid!: boolean;
   public userAgent!: string;
 }
 
@@ -19,7 +20,8 @@ export const SessionModel = (sequelize: Sequelize) => {
         allowNull: false,
         primaryKey: true,
       },
-      delivery: { type: DataTypes.STRING, allowNull: false },
+      delivery: { type: DataTypes.INTEGER, allowNull: false },
+      isValid: { type: DataTypes.BOOLEAN, allowNull: false },
       userAgent: { type: DataTypes.STRING, allowNull: false },
     },
     { sequelize, modelName: "sessions" }

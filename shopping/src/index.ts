@@ -1,7 +1,7 @@
+import "reflect-metadata";
 import log from "./utils/logger";
 import createServer from "./utils/server";
 import config from "../config";
-import "reflect-metadata";
 
 const port = config.port;
 const app = createServer();

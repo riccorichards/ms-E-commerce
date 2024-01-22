@@ -3,6 +3,7 @@ import UserModel from "../models/user.model";
 import {
   AddressInputType,
   BankAccountType,
+  PopulateAddress,
   SessionInputType,
   UpdateAddressInput,
   UpdateBankAccountType,
@@ -13,8 +14,7 @@ import {
 import log from "../../utils/logger";
 import { WishlistMessageType } from "../types/type.wishlist";
 import { CartMessageType } from "../types/type.cart";
-import { OrderMessageType } from "../types/types.order";
-import { FeedbackDocType, FeedbackMessageType } from "../types/types.feedback";
+import { FeedbackMessageType } from "../types/types.feedback";
 import SessionModel from "../models/session.model";
 import { omit } from "lodash";
 import BankModel from "../models/bank.model";
@@ -204,33 +204,75 @@ class CustomerRepo {
 
   async FindCustomer(id: string) {
     try {
-      return await UserModel.findById(id).populate("address").populate("bank");
+      const profile = await UserModel.findById(id)
+        .populate("address")
+        .populate("bank");
+
+      if (!profile) throw new Error("Profile was not found");
+
+      return profile;
     } catch (error: any) {
       log.error({ err: error.message });
       throw error;
     }
   }
 
-  async GetUserSpecificData(id: string, fieldToPopulated: string) {
+  async GetCustomerInfoById(customerId: string) {
     try {
-      const field = fieldToPopulated.toLowerCase();
-      const customer = await UserModel.findById(id).populate("feedback");
+      const profile = await UserModel.findById(customerId).populate("address");
 
-      if (!customer) {
-        throw new Error("Customer not found");
-      }
+      if (!profile) throw new Error("Profile was not found");
 
-      switch (field) {
-        case "cart":
-          return customer.cart;
-        case "order":
-          return customer.order;
-        case "feedback":
-          return customer.feedback;
-        case "wishlist":
-          return customer.wishlist;
-        default:
-          throw new Error("Invalid field requested");
+      const profileAddress = profile.address as PopulateAddress;
+
+      const customerOrderInfo = {
+        username: profile.username,
+        address: profileAddress.street,
+        email: profile.email,
+        image: profile.image,
+      };
+      return customerOrderInfo;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+
+  async GetCustomersLength() {
+    try {
+      const customers = (await UserModel.find()).length;
+
+      if (!customers) throw new Error("Profile was not found");
+
+      return customers;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+
+  async CustomerFeeds(id: string, page: number | string) {
+    try {
+      if (typeof page === "number") {
+        const limit = 7;
+        const skip = (page - 1) * limit;
+        const totalFeeds = (await FeedbackModel.find({ userId: id })).length;
+        const customerFeeds = await FeedbackModel.find({ userId: id })
+          .sort({ feedId: -1 })
+          .skip(skip)
+          .limit(limit);
+
+        if (!customerFeeds) {
+          throw new Error("Not found feeds or data is not available");
+        }
+        const totalPages = Math.ceil(totalFeeds / limit);
+        const pagination = {
+          page,
+          totalPages,
+          pageSize: limit,
+          totalCount: totalFeeds,
+        };
+        return { feedResult: customerFeeds, pagination };
       }
     } catch (error: any) {
       log.error({ err: error.message });
@@ -296,17 +338,11 @@ class CustomerRepo {
     }
   }
 
-  async AddOrderToProfile(input: OrderMessageType) {
+  async AddOrderAndMakeCartEmpty(userId: string) {
     try {
-      const profile = await UserModel.findById(input.userId);
+      const profile = await UserModel.findById(userId);
 
       if (!profile) throw new Error("Error with find User");
-
-      if (profile.order == undefined) {
-        profile.order = [];
-      }
-
-      profile.order.push(input);
 
       profile.cart = [];
 

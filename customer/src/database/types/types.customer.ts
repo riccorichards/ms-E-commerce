@@ -1,9 +1,15 @@
 import mongoose from "mongoose";
 import { WishlistMessageType } from "./type.wishlist";
 import { CartMessageType } from "./type.cart";
-import { OrderInput } from "./types.order";
 
 // medel for mongodb... schema's part which could recevied from the client side
+export interface PopulateAddress {
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+}
+
 export interface UserInput {
   username: string;
   email: string;
@@ -11,12 +17,11 @@ export interface UserInput {
   image: string;
   isAdmin: boolean;
   bonus: number;
-  address: mongoose.Schema.Types.ObjectId;
+  address: mongoose.Schema.Types.ObjectId | PopulateAddress;
   bank: mongoose.Schema.Types.ObjectId;
   wishlist: WishlistMessageType[];
   feedback: mongoose.Schema.Types.ObjectId[];
   cart: CartMessageType[];
-  order: OrderInput[];
 }
 
 //document model for user in mongodb

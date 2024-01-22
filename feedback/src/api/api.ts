@@ -29,6 +29,7 @@ const api = async (app: Application) => {
           return res
             .status(404)
             .json({ msg: "Error whilee creating a new feedback" });
+
         const { id, ...other } = newFeedback;
         const Customer_event = {
           type: "add_feedback",
@@ -89,11 +90,10 @@ const api = async (app: Application) => {
   });
 
   app.get(
-    "/feedback/:id",
+    "/feedbacks-length",
     async (req: Request<{ id: string }>, res: Response) => {
       try {
-        const id = parseInt(req.params.id);
-        const feeback = await feedService.FetFeedSevice(id);
+        const feeback = await feedService.GetFeedbacksLengthService();
         if (!feeback)
           return res.status(404).json({ msg: "Error while fetching feedback" });
         return res.status(201).json(feeback);

@@ -16,8 +16,8 @@ class FeedService {
     return await this.feedRepo.GetFeedbacks(userId);
   }
 
-  async FetFeedSevice(id: number) {
-    return await this.feedRepo.GetFeedback(id);
+  async GetFeedbacksLengthService() {
+    return await this.feedRepo.GetFeedbacksLength();
   }
 
   async UpdateFeedService(id: number, input: FeedbackValidation) {

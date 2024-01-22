@@ -16,6 +16,7 @@ import {
 import { IncomingValidationData } from "./middleware/IncomingValidationData";
 import { omit } from "lodash";
 import { IncomingOrderData } from "./middleware/validation/orders.validation";
+import { generateNewAccessToken } from "../utils/token.utils";
 
 const api = (app: Application, channel: Channel) => {
   const service = new DeliveryService();
@@ -58,7 +59,7 @@ const api = (app: Application, channel: Channel) => {
               type: "deliveryman",
               sessionId: newSession.id,
             },
-            { expiresIn: config.accessTokenTtl }
+            { expiresIn: 1800 }
           );
           const refreshToken = signWihtJWT(
             {
@@ -66,7 +67,7 @@ const api = (app: Application, channel: Channel) => {
               type: "deliveryman",
               sessionId: newSession.id,
             },
-            { expiresIn: config.refreshTtl }
+            { expiresIn: 2592000 }
           );
 
           res.cookie("delivery-accessToken", accessToken, {
@@ -77,6 +78,7 @@ const api = (app: Application, channel: Channel) => {
             sameSite: "strict",
             secure: false,
           });
+
           res.cookie("delivery-refreshToken", refreshToken, {
             maxAge: 3.154e10,
             httpOnly: true,
@@ -85,8 +87,11 @@ const api = (app: Application, channel: Channel) => {
             sameSite: "strict",
             secure: false,
           });
-          console.log(accessToken);
-          return res.status(200).json(omit(deliveryman.toJSON(), "password"));
+
+          return res.status(200).json({
+            deliveryman: omit(deliveryman.toJSON(), "password"),
+            ttl: 1800,
+          });
         }
       } catch (error) {
         ApiErrorHandler(error, res);
@@ -94,14 +99,17 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
-  app.get("/deliveryman/:id", async (req: Request, res: Response) => {
+  app.get("/all-deliveryman", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const result = await service.GetDeliverymanService(id);
-      if (!result)
-        return res
-          .status(404)
-          .json({ err: "Error while fetching delivery person" });
+      const page =
+        typeof req.query.page === "string" ? parseInt(req.query.page, 10) : 1;
+
+      const result = await service.GetAlDeliverymanService(page);
+      if (result === null)
+        return res.status(404).json({
+          err: "Error while fetching all valid delivery persons",
+        });
+
       return res.status(200).json(result);
     } catch (error) {
       ApiErrorHandler(error, res);
@@ -122,50 +130,120 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.get(
-    "/deliveryman",
-    [deserializeUser, requestUser],
-    async (req: Request, res: Response) => {
-      try {
-        const id = res.locals.delivery.deliverymanId;
-        const field = Array.isArray(req.query.field)
-          ? (req.query.field[0] as string)
-          : (req.query.field as string);
-
-        const result = await service.GetDeliverymanWithSpecFieldService(
-          id,
-          field
-        );
-
-        if (!result)
-          return res.status(404).json({
-            err: "Error while fetching delivery person with specific field",
-          });
-        return res.status(200).json(result);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
+  app.get("/deliveryman/:name", async (req: Request, res: Response) => {
+    try {
+      const name = req.params.name;
+      const isCoords = req.query.isCoords === "true";
+      const result = await service.GetDeliverymanByIdService(name, isCoords);
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error while fetching delivery person" });
+      return res.status(200).json(result);
+    } catch (error) {
+      ApiErrorHandler(error, res);
     }
-  );
+  });
 
-  app.post(
-    "/delivery-order",
-    IncomingValidationData(IncomingOrderData),
-    async (req: Request, res: Response) => {
-      try {
-        const result = await service.CreateOrderService(req.body);
-        if (result === null)
-          return res.status(404).json({ err: "Error while storing the order" });
-        return res.status(201).json(result);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
+  app.get("/deliveryman-for-order/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await service.GetDelirymanForOrderService(id);
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error while fetching delivery person" });
+      return res.status(200).json(result);
+    } catch (error) {
+      ApiErrorHandler(error, res);
     }
-  );
+  });
+
+  app.use([deserializeUser, requestUser]);
+
+  app.get("/deliveryman", async (req: Request, res: Response) => {
+    try {
+      const id = res.locals.delivery.deliverymanId;
+      const result = await service.GetDeliverymanService(id);
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error while fetching delivery person" });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  app.get("/deliveryman-feedbacks", async (req: Request, res: Response) => {
+    try {
+      const id = res.locals.delivery.deliverymanId;
+      let amountNumber: undefined | number | string = undefined;
+
+      if (typeof req.query.amount === "string") {
+        if (req.query.amount === "All") {
+          amountNumber = req.query.amount;
+        } else {
+          const parsedAmount = parseInt(req.query.amount);
+          if (isNaN(parsedAmount)) {
+            amountNumber = undefined;
+          } else {
+            amountNumber = parseInt(req.query.amount);
+          }
+        }
+      }
+      const result = await service.GetDeliveryFeedsService(id, amountNumber);
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error while fetching delivery person" });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  app.get("/delivery-activities", async (req: Request, res: Response) => {
+    try {
+      const id = res.locals.delivery.deliverymanId;
+
+      const isStats = req.query.isStats === "true";
+
+      let amountNumber: undefined | number | string = undefined;
+
+      if (typeof req.query.amount === "string") {
+        if (req.query.amount === "All") {
+          amountNumber = req.query.amount;
+        } else {
+          const parsedAmount = parseInt(req.query.amount);
+          if (isNaN(parsedAmount)) {
+            amountNumber = undefined;
+          } else {
+            amountNumber = parseInt(req.query.amount);
+          }
+        }
+      }
+
+      const result = await service.GetDeliveryActivitiesService(
+        id,
+        isStats,
+        amountNumber
+      );
+      if (!result)
+        return res
+          .status(404)
+          .json({ err: "Error while fetching delivery person" });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
 
   app.put(
     "/update-delivery",
-    [deserializeUser, requestUser],
     IncomingValidationData(UpdateDeliveryData),
     async (req: Request, res: Response) => {
       try {
@@ -182,17 +260,38 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
-  app.post("/order-menu", async (req: Request, res: Response) => {
+  app.post("/refresh-token", async (req: Request, res: Response) => {
     try {
-      OrderMenuValidation.parse(req.body);
-      const result = await service.AddOrderMenuService(req.body);
-      if (!result)
-        return res
-          .status(404)
-          .json({ err: "Error while adding a new order menu" });
-      return res.status(201).json(result);
+      const refresh = req.cookies["delivery-refreshToken"];
+
+      if (!refresh)
+        return res.status(400).json({ msg: "Invalid Refresh Token" });
+
+      const { token, error } = await generateNewAccessToken(refresh);
+
+      if (error) return res.status(400).json({ error: error });
+
+      res.cookie("delivery-accessToken", token, {
+        httpOnly: true,
+        domain: "localhost",
+        path: "/",
+        sameSite: "strict",
+        secure: false,
+      });
+
+      return res.status(200).json({ ttl: 1800 });
     } catch (error) {
       ApiErrorHandler(error, res);
+    }
+  });
+
+  app.delete("/log_out", async (req: Request, res: Response) => {
+    try {
+      res.clearCookie("delivery-refreshToken");
+      res.clearCookie("delivery-accessToken");
+      return res.status(201).json(null);
+    } catch (error) {
+      return res.status(500).json({ err: error });
     }
   });
 };

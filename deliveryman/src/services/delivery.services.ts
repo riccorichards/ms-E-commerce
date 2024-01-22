@@ -2,15 +2,10 @@ import { Channel, Message } from "amqplib";
 import DeliveryRepo from "../database/repository/delivery.repository";
 import { DeliveryType } from "../database/types/type.delivery";
 import { LoginStyle } from "../database/types/type.session";
-import { CustomerType } from "../database/types/types.customer";
 import { FeedbackMessageType } from "../database/types/types.feedbacks";
-import { OrderType } from "../database/types/types.order";
-import { ProductType } from "../database/types/types.orderMenu";
-import { VendorType } from "../database/types/types.vendor";
-import { EventType } from "../database/types/type.event";
+import { EditImageMessage, EventType } from "../database/types/type.event";
 import log from "../utils/logger";
 import { IncomingDeliveryDataType } from "../api/middleware/validation/deliveryman.validation";
-import { IncomingOrderDataType } from "../api/middleware/validation/orders.validation";
 
 class DeliveryService {
   private repository: DeliveryRepo;
@@ -34,35 +29,54 @@ class DeliveryService {
     return this.repository.UpdateDeliveryman(id, input);
   }
 
-  async CreateOrderService(input: IncomingOrderDataType["body"]) {
-    return this.repository.CreateOrder(input);
-  }
-
   async GetAllValidDeliverymanService() {
     return this.repository.GetAllDeliverymen();
-  }
-
-  async AddOrderMenuService(input: ProductType[]) {
-    return this.repository.AddOrderMenu(input);
   }
 
   async CreateFeedbackService(input: FeedbackMessageType) {
     return this.repository.createFeedback(input);
   }
-  
+
   async UpdateFeedbackService(input: FeedbackMessageType) {
     return this.repository.updateFeedback(input);
   }
+
+  async EditImageSerivce(input: EditImageMessage) {
+    return this.repository.editImage(input);
+  }
+  async GetDeliveryFeedsService(
+    id: number,
+    amount: number | undefined | string
+  ) {
+    return this.repository.getDeliveryFeeds(id, amount);
+  }
+
+  async GetDeliveryActivitiesService(
+    id: number,
+    isStats: boolean,
+    amount: number | undefined | string
+  ) {
+    return this.repository.GetDeliveryActivities(id, isStats, amount);
+  }
+
   async DeleteFeedbackService(id: number) {
     return this.repository.removeFeedback(id);
   }
 
-  async GetDeliverymanService(id: number) {
-    return this.repository.GetDeliveryman(id);
+  async GetDeliverymanByIdService(name: string, isCoords: boolean) {
+    return this.repository.GetDeliverymanById(name, isCoords);
   }
 
-  async GetDeliverymanWithSpecFieldService(id: number, field: string) {
-    return this.repository.GetDeliverymanWithSpecField(id, field);
+  async GetAlDeliverymanService(page: number) {
+    return this.repository.GetAllDeliveryman(page);
+  }
+
+  async GetDelirymanForOrderService(id: number) {
+    return this.repository.GetDeliverymanForOrder(id);
+  }
+
+  async GetDeliverymanService(id: number) {
+    return this.repository.GetDeliveryman(id);
   }
 
   async SubscribeEvent(event: EventType, channel: Channel, msg: Message) {
@@ -73,13 +87,17 @@ class DeliveryService {
     try {
       switch (event.type) {
         case "add_feed_in_deliveryman":
-          this.CreateFeedbackService(event.data);
+          this.CreateFeedbackService(event.data as FeedbackMessageType);
           break;
         case "update_feed_in_deliveryman":
-          this.UpdateFeedbackService(event.data);
+          this.UpdateFeedbackService(event.data as FeedbackMessageType);
           break;
         case "remove_feed_from_deliveryman":
-          this.DeleteFeedbackService(event.data.feedId);
+          const feed = event.data as FeedbackMessageType;
+          this.DeleteFeedbackService(feed.feedId);
+          break;
+        case "upload_deliveryman_profile":
+          this.EditImageSerivce(event.data as EditImageMessage);
           break;
         default:
           log.info(`Unhandled event type: ${event.type}`);

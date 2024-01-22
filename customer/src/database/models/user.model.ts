@@ -23,6 +23,7 @@ const UserSchema = new mongoose.Schema(
         title: { type: String },
         desc: { type: String },
         image: { type: String },
+        address: { type: String },
         price: { type: String },
       },
     ],
@@ -31,14 +32,9 @@ const UserSchema = new mongoose.Schema(
         id: { type: Number, required: true },
         title: { type: String },
         image: { type: String },
+        address: { type: String },
         price: { type: String },
         unit: { type: Number, required: true },
-      },
-    ],
-    order: [
-      {
-        type: mongoose.Schema.ObjectId,
-        ref: "order",
       },
     ],
     feedback: [{ type: mongoose.Schema.Types.ObjectId, ref: "Feedback" }],

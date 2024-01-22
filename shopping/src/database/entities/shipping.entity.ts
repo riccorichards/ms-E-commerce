@@ -1,35 +1,34 @@
-import { IsEmail, IsString, Length } from "class-validator";
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  OneToOne,
-  PrimaryGeneratedColumn,
-} from "typeorm";
-import Address from "./address.entity";
-import Vendor from "./vendor.entity";
-import Deliveryman from "./deliveryman.entity";
+import { IsEmail, IsNumber, IsString, Length } from "class-validator";
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity("shipping")
 class Shipping {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
-  @IsString()
-  @Length(5, 200)
-  full_name: string;
-
-  @Column({ nullable: true })
-  @IsString()
-  @Length(5, 200)
-  company_name: string;
-
   @Column()
-  @IsEmail()
   @IsString()
   @Length(5, 100)
+  username: string;
+
+  @Column()
+  @IsString()
+  @IsEmail()
+  @Length(5, 100)
   email: string;
+
+  @Column()
+  @IsString()
+  @Length(5, 100)
+  address: string;
+
+  @Column()
+  @IsNumber()
+  orderId: number;
+
+  @Column()
+  @IsString()
+  personName: string;
 
   @Column()
   @IsString()
@@ -38,26 +37,13 @@ class Shipping {
 
   @Column()
   @IsString()
+  @Length(16)
+  debit_card: string;
+
+  @Column()
+  @IsString()
   @Length(5, 250)
-  mark: string;
-
-  @OneToOne(() => Address, { cascade: true })
-  @JoinColumn({
-    name: "address_id",
-  })
-  address: Address;
-
-  @OneToOne(() => Vendor, { cascade: true })
-  @JoinColumn({
-    name: "vendor_id",
-  })
-  vendor: Vendor;
-
-  @OneToOne(() => Deliveryman, { cascade: true })
-  @JoinColumn({
-    name: "deliveryman_id",
-  })
-  deliveryman: Deliveryman;
+  note: string;
 }
 
 export default Shipping;

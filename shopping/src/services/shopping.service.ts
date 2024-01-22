@@ -1,11 +1,9 @@
 import ShoppingRepo from "../database/repository/shopping.repository";
 import {
   OrderInputValidation,
-  OrderItemInputValidation,
-  PaymentInputValidation,
   ShippingInputValidation,
-  TransactionInputValidation,
-} from "../database/validation/shopping.validation";
+  queryParamsType,
+} from "../api/validation/shopping.validation";
 import log from "../utils/logger";
 
 class ShoppingService {
@@ -14,24 +12,10 @@ class ShoppingService {
   constructor(shoppingRepo: ShoppingRepo) {
     this.shoppingRepo = shoppingRepo;
   }
-  
+
   async CreateOrderService(orderInput: OrderInputValidation) {
     try {
       return await this.shoppingRepo.CreateOrderRepo(orderInput);
-    } catch (error: any) {
-      log.error(error.message);
-    }
-  }
-
-  async CreateOrderItemService(
-    orderId: number,
-    orderItemInput: OrderItemInputValidation[]
-  ) {
-    try {
-      return await this.shoppingRepo.CreateOrderItemRepo(
-        orderId,
-        orderItemInput
-      );
     } catch (error: any) {
       log.error(error.message);
     }
@@ -45,55 +29,65 @@ class ShoppingService {
     }
   }
 
-  async CreateTransactionService(
-    orderId: number,
-    transactioInput: TransactionInputValidation
-  ) {
+  async GetOrdersListService(customerId: string, page: number | undefined) {
     try {
-      return await this.shoppingRepo.CreateTransactionRepo(
-        orderId,
-        transactioInput
-      );
+      return await this.shoppingRepo.GetOrdersList(customerId, page);
     } catch (error: any) {
       log.error(error.message);
     }
   }
 
-  async CreatePayloadService(paymentInput: PaymentInputValidation) {
+  async GetOrdersDataService() {
     try {
-      return await this.shoppingRepo.CreatePaymentRepo(paymentInput);
+      return await this.shoppingRepo.GetOrdersData();
     } catch (error: any) {
       log.error(error.message);
     }
   }
 
-  async GetAllPaymentsService() {
+  async GetTopCustomersService() {
     try {
-      return await this.shoppingRepo.ReturnAllPayments();
+      return await this.shoppingRepo.GetTopCustomers();
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetOrdersByDeliveryNameService(name: string) {
+    try {
+      return await this.shoppingRepo.GetOrdersByDeliveryName(name);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetOrdersService() {
+    try {
+      return await this.shoppingRepo.GetOrders();
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetPopularFoodsService() {
+    try {
+      return await this.shoppingRepo.GetPopularFoods();
     } catch (error: any) {
       log.error(error.message);
     }
   }
 
-  async GetPaymentByIdService(id: number) {
+  async GetOrderByIdService(orderId: number) {
     try {
-      return await this.shoppingRepo.ReturnPaymentById(id);
+      return await this.shoppingRepo.GetOrderById(orderId);
     } catch (error: any) {
       log.error(error.message);
     }
   }
 
-  async AddVendorInfoService(id: number) {
+  async CancelOrderService(orderId: number) {
     try {
-      return await this.shoppingRepo.ReturnPaymentById(id);
-    } catch (error: any) {
-      log.error(error.message);
-    }
-  }
-
-  async AddDeliverymanInfoService(id: number) {
-    try {
-      return await this.shoppingRepo.ReturnPaymentById(id);
+      return await this.shoppingRepo.CancelOrder(orderId);
     } catch (error: any) {
       log.error(error.message);
     }

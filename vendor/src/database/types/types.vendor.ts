@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { OrderDocument } from "./type.order";
 
 interface WorkingHrsType {
   workingDays: string;
@@ -17,10 +18,11 @@ export interface VendorType {
   email: string;
   password: string;
   workingHrs: WorkingHrsType;
-  address: mongoose.Schema.Types.ObjectId;
+  address: string;
   feeds: mongoose.Schema.Types.ObjectId[];
   teamMember: mongoose.Schema.Types.ObjectId[];
   foods: mongoose.Schema.Types.ObjectId[];
+  orders: mongoose.Types.ObjectId[] | OrderDocument[];
   gallery: mongoose.Schema.Types.ObjectId[];
   socialMedia: { title: string; url: string }[];
 }

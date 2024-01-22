@@ -1,5 +1,6 @@
 export interface SessionType {
-  delivery: string;
+  delivery: number;
+  isValid: boolean;
   userAgent: string;
 }
 

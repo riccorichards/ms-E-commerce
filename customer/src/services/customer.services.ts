@@ -12,7 +12,6 @@ import {
   UploadFileType,
 } from "../database/types/types.customer";
 import { FeedbackMessageType } from "../database/types/types.feedback";
-import { OrderMessageType } from "../database/types/types.order";
 import log from "../utils/logger";
 import { EventType } from "../database/types/type.event";
 import { CreateUserSchemaType } from "../api/middleware/validation/user.validation";
@@ -113,11 +112,27 @@ class CustomerService {
     }
   }
 
-  async CustomerData(id: string, fieldToPopulated: string) {
+  async GetCustomerInfoByIdService(customerId: string) {
     try {
-      const specificData = await this.repository.GetUserSpecificData(
+      return await this.repository.GetCustomerInfoById(customerId);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async GetCustomersLengthService() {
+    try {
+      return await this.repository.GetCustomersLength();
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async CustomerFeedsService(id: string, page: number | string) {
+    try {
+      const specificData = await this.repository.CustomerFeeds(
         id,
-        fieldToPopulated
+        page
       );
 
       return specificData;
@@ -152,9 +167,9 @@ class CustomerService {
     }
   }
 
-  async ManageOrder(input: OrderMessageType) {
+  async AddOrderAndMakeEmptyCart(userId: string) {
     try {
-      const newOrder = await this.repository.AddOrderToProfile(input);
+      const newOrder = await this.repository.AddOrderAndMakeCartEmpty(userId);
 
       return newOrder;
     } catch (error: any) {
@@ -175,14 +190,15 @@ class CustomerService {
         case "add_product_to_cart":
           this.ManageCart(event.data as CartMessageType);
           break;
-        case "add_order":
-          this.ManageOrder(event.data as OrderMessageType);
+        case "empty_cart":
+          this.AddOrderAndMakeEmptyCart(event.data.userId);
           break;
         case "add_feedback":
           this.ManageReview(event.data as FeedbackMessageType);
           break;
         case "upload_profile_url":
           this.UploadProfile(event.data as UploadFileType);
+          break;
         default:
           log.info(`Unhandled event type: ${event.type}`);
       }

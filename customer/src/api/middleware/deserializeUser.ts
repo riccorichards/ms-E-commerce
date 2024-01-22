@@ -27,12 +27,14 @@ export const deserializeUser = async (
 
   if (refreshToken && expired) {
     try {
-      const newAccessToken = await generateNewAccessToken(refreshToken);
+      const { token, error } = await generateNewAccessToken(refreshToken);
 
-      if (newAccessToken) {
-        res.setHeader("x-access-token", newAccessToken);
+      if (error) {
+        return res.status(401).json({ error: error });
+      }
 
-        res.cookie("accessToken", newAccessToken, {
+      if (token) {
+        res.cookie("accessToken", token, {
           httpOnly: false,
           path: "/",
           secure: false,
@@ -40,7 +42,7 @@ export const deserializeUser = async (
           domain: "localhost",
         });
 
-        const result = verifyJWT(newAccessToken);
+        const result = verifyJWT(token);
         res.locals.user = result.decoded;
         next();
       }

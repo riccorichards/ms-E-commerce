@@ -16,11 +16,29 @@ class ProductRepo {
     }
   }
 
-  async getProducts() {
+  async getProducts(page: number) {
     try {
-      return await initialize.Product.findAll({
+      const limit = 5;
+      const offset = (page - 1) * limit;
+
+      const totalProductsCount = await initialize.Product.count();
+
+      const { rows } = await initialize.Product.findAndCountAll({
         include: [{ model: initialize.Feedbacks, as: "feedbacks" }],
+        limit,
+        offset,
       });
+      const totalPages = Math.ceil(totalProductsCount / limit);
+
+      return {
+        products: rows,
+        pagination: {
+          page,
+          totalPages,
+          pageSize: limit,
+          totalCount: totalProductsCount,
+        },
+      };
     } catch (error: any) {
       log.error({
         err: error.message,
@@ -33,6 +51,16 @@ class ProductRepo {
       return await initialize.Product.findAll({
         where: { vendor_name: vendorName },
       });
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+
+  async getFoodsLength() {
+    try {
+      return (await initialize.Product.findAll()).length;
     } catch (error: any) {
       log.error({
         err: error.message,
