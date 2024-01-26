@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 
 export interface GalleryInputType {
-  url: string;
   title: string;
+  userId: string;
+  url: string | null;
 }
 
 export interface GalleryDocument extends GalleryInputType, mongoose.Document {

@@ -19,3 +19,9 @@ export interface FeedbacksDocsType extends FeedbackMessageType {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface UpdateFeedbackWithCustomerInfo {
+  userId: string;
+  updatedImage: string;
+  updatedUsername: string;
+}

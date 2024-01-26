@@ -1,8 +1,8 @@
 import amqplib, { Channel, Connection } from "amqplib";
 import config from "../../config/index";
 import log from "./logger";
-import FeedbacksService from "../services/feedback.services";
 import ProductService from "../services/product.services";
+import FeedbacksService from "../services/feedback.services";
 
 // create a channel
 export const CreateChannel = async (): Promise<Channel | undefined> => {

@@ -10,6 +10,7 @@ class Product
   public desc!: string;
   public price!: string;
   public image!: string;
+  public url!: string | null;
   public vendor_name!: string;
   public address!: string;
   public vendor_rating!: number;
@@ -43,6 +44,10 @@ export const ProductModel = (sequelize: Sequelize) => {
       image: {
         type: DataTypes.STRING,
         allowNull: false,
+      },
+      url: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
       vendor_name: {
         type: DataTypes.STRING,

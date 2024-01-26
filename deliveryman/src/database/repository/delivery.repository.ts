@@ -3,11 +3,17 @@ import initialize from "../initialize";
 import { DeliveryType } from "../types/type.delivery";
 import { LoginStyle } from "../types/type.session";
 import bcrypt from "bcrypt";
-import { FeedbackMessageType } from "../types/types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateCustomerInfoInFeedMessageType,
+} from "../types/types.feedbacks";
 import { RepoErrorHandler } from "./RepoErrorHandler";
 import { IncomingDeliveryDataType } from "../../api/middleware/validation/deliveryman.validation";
 import { EditImageMessage } from "../types/type.event";
-import { makeRequestWithRetries } from "../../utils/makeRequestWithRetries";
+import {
+  makeRequestWithRetries,
+  takeUrl,
+} from "../../utils/makeRequestWithRetries";
 import { OrderType } from "../types/types.orders";
 
 class DeliveryRepo {
@@ -26,6 +32,7 @@ class DeliveryRepo {
         image,
         isValid: true,
         currentAddress,
+        url: null,
       });
 
       if (!newDeliveryMan)
@@ -108,18 +115,22 @@ class DeliveryRepo {
     }
   }
 
-  async updateFeedback(input: FeedbackMessageType) {
+  async updateFeedback(input: UpdateCustomerInfoInFeedMessageType) {
     try {
-      const updatedFeed = await initialize.Feedbacks.findOne({
-        where: { feedId: input.feedId },
+      const updatedFeed = await initialize.Feedbacks.findAll({
+        where: { userId: input.userId },
       });
 
       if (!updatedFeed) throw new Error("Not found feed");
 
-      updatedFeed.review = input.review;
+      return await Promise.all(
+        updatedFeed.map(async (feed) => {
+          feed.authorImg = input.updatedImage;
+          feed.author = input.updatedUsername;
 
-      await updatedFeed.save();
-      return await initialize.Feedbacks.findByPk(input.feedId);
+          return feed.save();
+        })
+      );
     } catch (error) {
       RepoErrorHandler(error);
     }
@@ -131,7 +142,8 @@ class DeliveryRepo {
 
       if (!deliveryman) throw new Error("Deliveryman Not Found");
 
-      deliveryman.image = input.url;
+      deliveryman.image = input.title;
+
       return await deliveryman.save();
     } catch (error) {
       RepoErrorHandler(error);
@@ -155,6 +167,7 @@ class DeliveryRepo {
       const { id, name, image, createdAt, email, currentAddress } =
         delivery.dataValues;
 
+      const imgUrl = await takeUrl(image);
       if (isCoords) {
         const url = `http://localhost:8007/coords/${currentAddress}`;
         const coords: { latitude: number; longitude: number } =
@@ -162,10 +175,11 @@ class DeliveryRepo {
 
         if (coords) {
           const { latitude, longitude } = coords;
+
           return {
             id,
             name,
-            image,
+            image: imgUrl,
             createdAt,
             email,
             currentAddress,
@@ -175,7 +189,7 @@ class DeliveryRepo {
         }
       }
 
-      return { id, name, image, email, currentAddress };
+      return { id, name, image: imgUrl, email, currentAddress };
     } catch (error) {
       RepoErrorHandler(error);
     }
@@ -187,7 +201,9 @@ class DeliveryRepo {
       if (!delivery) throw new Error("Not found delivery");
       const { name, image, createdAt } = delivery.dataValues;
 
-      return { name, image, createdAt };
+      const imageUrl = await takeUrl(image);
+
+      return { name, image: imageUrl, createdAt };
     } catch (error) {
       RepoErrorHandler(error);
     }
@@ -294,8 +310,20 @@ class DeliveryRepo {
       const sortedOrders = deliverymanOrders
         .sort((a, b) => b.id - a.id)
         .slice(0, targetAmount);
+
+      const oiWithImgUrl = sortedOrders.map(async (order) => {
+        const orderItems = await Promise.all(
+          order.orderItem.map(async (item) => {
+            const image = await takeUrl(item.product_image);
+            item.product_image = image;
+            return item;
+          })
+        );
+        return { ...order, orderItem: orderItems };
+      });
+
       return {
-        res: sortedOrders,
+        res: await Promise.all(oiWithImgUrl),
         len: deliverymanOrders.length,
         isStats: false,
       };
@@ -316,8 +344,19 @@ class DeliveryRepo {
           : typeof amount === "undefined"
           ? 5
           : feedbacks.length;
-      console.log({ targetAmount });
-      return feedbacks.slice(0, targetAmount);
+      const result = feedbacks.slice(0, targetAmount);
+
+      return await Promise.all(
+        result.map(async (feed) => {
+          const authorImg = await takeUrl(feed.authorImg);
+          const targetImg = await takeUrl(feed.targetImg);
+
+          feed.authorImg = authorImg;
+          feed.targetImg = targetImg;
+
+          return feed;
+        })
+      );
     } catch (error) {
       RepoErrorHandler(error);
     }
@@ -329,15 +368,16 @@ class DeliveryRepo {
 
       if (!delivery) throw new Error("Not found delivery");
 
+      const image = await takeUrl(delivery.image);
+
+      delivery.url = image;
+
       const feedCount = await initialize.Feedbacks.count({
         where: { targetId: id },
       });
 
-      if (!feedCount)
-        throw new Error("feedback not found or data is not available");
-
       const result = delivery.dataValues;
-      return { ...result, feedCount };
+      return { ...result, feedCount: feedCount || 0 };
     } catch (error) {
       RepoErrorHandler(error);
     }

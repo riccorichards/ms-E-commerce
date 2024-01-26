@@ -1,6 +1,11 @@
 import amqplib, { Channel, Connection } from "amqplib";
 import config from "../../config/index";
 import log from "./logger";
+import FeedService from "../services/feed.service";
+import FeedbackRepo from "../database/repository/feedback.repository";
+import { Repository } from "typeorm";
+import Feedbacks from "../database/entities/feedback.entity";
+import Feedback from "../database/repository/initialiaze.repo";
 // create a channel
 export const CreateChannel = async () => {
   try {
@@ -17,6 +22,33 @@ export const CreateChannel = async () => {
     }
   } catch (error: any) {
     throw new Error(error);
+  }
+};
+
+export const SubscribeMessage = async (
+  channel: Channel,
+  queueName: string,
+  bindingKey: string
+): Promise<void> => {
+  try {
+    const feedbackRepo = new FeedbackRepo(Feedback);
+    const feedService = new FeedService(feedbackRepo);
+    const feedQueue = await channel.assertQueue(queueName, {
+      durable: true,
+    });
+    channel.bindQueue(feedQueue.queue, config.exchange_name, bindingKey);
+    channel.consume(feedQueue.queue, async (data) => {
+      if (data) {
+        const event = JSON.parse(data.content.toString());
+        try {
+          await feedService.SubscribeEvent(event, channel, data);
+        } catch (error: any) {
+          log.error("Error with subscribe service...", error.message);
+        }
+      }
+    });
+  } catch (error: any) {
+    log.error("Failed to start the subscriber:", error.message);
   }
 };
 

@@ -162,34 +162,16 @@ const api = async (app: Application, channel: Channel) => {
   app.get("/main-subcat/:_id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params._id);
-      console.log(id);
       const subCategory = await Sservice.getMainCatSubCatsService(id);
       if (!subCategory)
         return res
           .status(404)
           .json({ msg: "Error while a fetching the sub cat" });
-      console.log(subCategory, `<<<<<<<<<<<< ${id} ID`);
       return res.status(200).json(subCategory);
     } catch (error) {
       ApiErrorHandler(res, error);
     }
   });
-
-  //app.get("/search-food-inSubCat/:_id", async (req: Request, res: Response) => {
-  //  try {
-  //    const id = parseInt(req.params._id);
-  //    const title = req.query.title as string;
-  //    if (!title) return res.status(400).json("Title is not valid");
-  //    const subCategory = await Sservice.searchFoodInSubCatService(id, title);
-  //    if (!subCategory)
-  //      return res
-  //        .status(404)
-  //        .json({ msg: "Error while a fetching the sub cat" });
-  //    return res.status(200).json(subCategory);
-  //  } catch (error) {
-  //    ApiErrorHandler(res, error);
-  //  }
-  //});
 
   app.delete(
     "/sub-cat/:_id",
@@ -232,6 +214,7 @@ const api = async (app: Application, channel: Channel) => {
         };
 
         if (channel) {
+          console.log(event);
           PublishMessage(
             channel,
             config.vendor_binding_key,
@@ -255,6 +238,20 @@ const api = async (app: Application, channel: Channel) => {
           .status(404)
           .json({ msg: "Error while fetching all products" });
       return res.status(200).json(products);
+    } catch (error) {
+      ApiErrorHandler(res, error);
+    }
+  });
+
+  app.get("/product-feeds/:productId", async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const feeds = await Pservice.getProductsFeedsService(productId);
+      if (!feeds)
+        return res
+          .status(404)
+          .json({ msg: "Error while fetching all products" });
+      return res.status(200).json(feeds);
     } catch (error) {
       ApiErrorHandler(res, error);
     }

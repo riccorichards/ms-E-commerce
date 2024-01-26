@@ -17,3 +17,9 @@ export interface FeedbackMessageType {
 export interface FeedbacksDocsType extends FeedbackMessageType {
   id: number;
 }
+
+export interface UpdateCustomerInfoInFeedMessageType {
+  userId: string;
+  updatedImage: string;
+  updatedUsername: string;
+}

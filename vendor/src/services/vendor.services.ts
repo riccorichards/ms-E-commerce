@@ -1,7 +1,10 @@
 import { Channel, Message } from "amqplib";
 import { EventType } from "../database/types/type.event";
 import log from "../utils/logger";
-import { FeedbackMessageType } from "../database/types/types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackWithCustomerInfo,
+} from "../database/types/types.feedbacks";
 import VendorRepo from "../database/repository/vendor.repository";
 import {
   CreateVendorSchemaType,
@@ -18,12 +21,9 @@ import {
   BioValidationType,
   workingDaysValidationType,
 } from "../api/middleware/validation/additional.validation";
-import {
-  GalleryMessageType,
-  ImageMessageType,
-  RemovePhotoMsg,
-} from "../database/types/type.imageUrl";
+import { ImageMessageType } from "../database/types/type.imageUrl";
 import { MessageOrderType } from "../database/types/type.order";
+import { CreateAddressSchemaType } from "../api/middleware/validation/address.validation";
 
 class VendorService {
   private repository: VendorRepo;
@@ -90,6 +90,17 @@ class VendorService {
   ) {
     try {
       return await this.repository.UpdateTeamMember(id, input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async AddVendorAddressService(
+    id: string,
+    input: CreateAddressSchemaType["body"]
+  ) {
+    try {
+      return await this.repository.AddVendorAddress(id, input);
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -220,6 +231,14 @@ class VendorService {
     }
   }
 
+  async GetFoodsService(vendorId: string) {
+    try {
+      return await this.repository.GetFoods(vendorId);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
   async GetGallery(vendorId: string) {
     try {
       return await this.repository.GetGallery(vendorId);
@@ -228,9 +247,17 @@ class VendorService {
     }
   }
 
-  async FindVendorForOrder(vendorId: string) {
+  async UpdateProfileService(vendorId: string, photoTitle: string) {
     try {
-      return await this.repository.VendorForOrder(vendorId);
+      return await this.repository.UpdateProfile(vendorId, photoTitle);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async FindVendorForOrder(address: string) {
+    try {
+      return await this.repository.VendorForOrder(address);
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -284,9 +311,20 @@ class VendorService {
     }
   }
 
-  async uploadVendorGallery(input: GalleryMessageType) {
+  async uploadVendorGallery(input: ImageMessageType) {
     try {
       return await this.repository.UploadGallery(input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+
+  async updateFeedbackWithCustomerInfoService(
+    input: UpdateFeedbackWithCustomerInfo
+  ) {
+    try {
+      return await this.repository.updateFeedbackWithCustomerInfo(input);
     } catch (error: any) {
       log.error({ err: error.message });
       throw new Error(error.message);
@@ -302,7 +340,7 @@ class VendorService {
     }
   }
 
-  async deletePhotoService(photo: RemovePhotoMsg) {
+  async deletePhotoService(photo: ImageMessageType) {
     try {
       return await this.repository.deletePhotoFromVendorGallery(photo);
     } catch (error: any) {
@@ -380,10 +418,15 @@ class VendorService {
           this.uploadVendorImage(event.data as ImageMessageType);
           break;
         case "upload_vendor_gallery":
-          this.uploadVendorGallery(event.data as GalleryMessageType);
+          this.uploadVendorGallery(event.data as ImageMessageType);
+          break;
+        case "update_customer_info":
+          this.updateFeedbackWithCustomerInfoService(
+            event.data as UpdateFeedbackWithCustomerInfo
+          );
           break;
         case "delete_photo_from_gallery":
-          this.deletePhotoService(event.data as RemovePhotoMsg);
+          this.deletePhotoService(event.data as ImageMessageType);
           break;
         case "delete_food_in_vendor":
           const food = event.data as FoodMessageType;

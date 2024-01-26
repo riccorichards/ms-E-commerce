@@ -7,6 +7,7 @@ import TeamModel from "../models/teamMember.model";
 import {
   FeedbackMessageType,
   FeedbacksDocsType,
+  UpdateFeedbackWithCustomerInfo,
 } from "../types/types.feedbacks";
 import FeedsModel from "../models/feedback.model";
 import {
@@ -15,7 +16,10 @@ import {
 } from "../../api/middleware/validation/vendor.validation";
 import ErrorHandler from "./repoErrorHandler";
 import { CreateSessionSchemaType } from "../../api/middleware/validation/session.validation";
-import { UpdateAddressSchemaType } from "../../api/middleware/validation/address.validation";
+import {
+  CreateAddressSchemaType,
+  UpdateAddressSchemaType,
+} from "../../api/middleware/validation/address.validation";
 import {
   CreateTeamMemberSchemaType,
   UpdateTeamMemberSchemaType,
@@ -28,18 +32,17 @@ import { AddSocialUrlType } from "../../api/middleware/validation/socialUrls.val
 import { URL } from "node:url";
 import FoodsModel from "../models/foods.model";
 import { FoodMessageType } from "../types/type.foods";
-import {
-  GalleryMessageType,
-  ImageMessageType,
-  RemovePhotoMsg,
-} from "../types/type.imageUrl";
+import { ImageMessageType } from "../types/type.imageUrl";
 import GalleryModel from "../models/gallery.model";
 import { MessageOrderType, OrderDocument } from "../types/type.order";
 import OrderModel from "../models/order.model";
 import {
   getCustomerInfo,
   makeRequestWithRetries,
+  takeUrl,
 } from "../../utils/makeRequestWithRetries";
+import { GalleryDocument, GalleryInputType } from "../types/type.gallery";
+import { TeamMemberType } from "../types/type.teamMember";
 
 interface VendorTotal {
   vendor: string;
@@ -96,6 +99,11 @@ class VendorRepo {
 
       if (!newSession) throw new Error("Error while creating a new session");
 
+      const url = `http://localhost:8007/file?title=${vendor.image}`;
+      const image = await makeRequestWithRetries(url, "GET");
+      if (!image) throw new Error("Error while taken image");
+
+      vendor.image = image;
       return { vendor, newSession };
     } catch (error) {
       ErrorHandler(error);
@@ -142,10 +150,35 @@ class VendorRepo {
 
   async UpdateVendorProfile(
     query: string,
-    input: CreateVendorSchemaType["body"]
+    input: UpdateVendorSchemaType["body"]
   ) {
     try {
-      return await VendorModel.findByIdAndUpdate(query, input, { new: true });
+      const { name } = input;
+      const updatedVendor = await VendorModel.findByIdAndUpdate(query, input, {
+        new: true,
+      });
+
+      if (!updatedVendor)
+        throw new Error("Error while updating vendor profile");
+
+      const feedbacks = await FeedsModel.find({ forVendorId: query });
+
+      if (!feedbacks)
+        throw new Error("Feedbacks was not found or data is not available");
+
+      if (name) {
+        await Promise.all(
+          feedbacks.map(async (feed) => {
+            feed.targetTitle = name;
+
+            await feed.save();
+          })
+        );
+      }
+
+      const image = await takeUrl(updatedVendor.image);
+      updatedVendor.url = image;
+      return updatedVendor;
     } catch (error) {
       ErrorHandler(error);
     }
@@ -165,6 +198,22 @@ class VendorRepo {
       if (!updatedTeamMember)
         throw new Error("Error while updating the vendor's team member");
       return updatedTeamMember;
+    } catch (error) {
+      ErrorHandler(error);
+    }
+  }
+
+  async AddVendorAddress(
+    query: string,
+    input: CreateAddressSchemaType["body"]
+  ) {
+    try {
+      const profile = await VendorModel.findById(query);
+
+      if (!profile) throw new Error("Vendor was not found");
+
+      profile.address = input.address;
+      return await profile.save();
     } catch (error) {
       ErrorHandler(error);
     }
@@ -203,22 +252,56 @@ class VendorRepo {
     try {
       const vendor = await VendorModel.findById(input.userId);
       if (!vendor) throw new Error("Vendor Not Found");
-      vendor.image = input.url;
+      vendor.image = input.title;
+
+      const feedbacks = await FeedsModel.find({ forVendorId: input.userId });
+      if (!feedbacks) throw new Error("Data was not found");
+
+      await Promise.all(
+        feedbacks.map(async (feed) => {
+          feed.targetImg = input.title;
+          return await feed.save();
+        })
+      );
       return await vendor.save();
     } catch (error) {
       ErrorHandler(error);
     }
   }
 
-  async UploadGallery(input: GalleryMessageType) {
+  async UploadGallery(input: ImageMessageType) {
     try {
-      const vendor = await VendorModel.findById(input.userId);
+      const { title, userId } = input;
+      const vendor = await VendorModel.findById(userId);
       if (!vendor) throw new Error("Vendor Not Found");
-      const { url, title } = input.photo;
-      const addNewGallertPhoto = await GalleryModel.create({ url, title });
+      const addNewGallertPhoto = await GalleryModel.create({
+        title,
+        userId,
+        url: null,
+      });
       vendor.gallery.push(addNewGallertPhoto._id);
 
       return await vendor.save();
+    } catch (error) {
+      ErrorHandler(error);
+    }
+  }
+
+  async updateFeedbackWithCustomerInfo(input: UpdateFeedbackWithCustomerInfo) {
+    try {
+      const { updatedImage, updatedUsername, userId } = input;
+
+      const feedbacks = await FeedsModel.find({ userId });
+      if (!feedbacks)
+        throw new Error("Vendor's feeds Not Found or data is not available");
+
+      return await Promise.all(
+        feedbacks.map(async (feed) => {
+          feed.author = updatedUsername;
+          feed.authorImg = updatedImage;
+          return await feed.save();
+        })
+      );
     } catch (error) {
       ErrorHandler(error);
     }
@@ -295,26 +378,15 @@ class VendorRepo {
 
   async FindVendor(id: string) {
     try {
-      const result = await VendorModel.findById(id)
-        .populate({
-          path: "teamMember",
-          options: { sort: { createdAt: -1 } },
-        })
-        .populate({
-          path: "feeds",
-          options: { sort: { createdAt: -1 } },
-        })
-        .populate({
-          path: "foods",
-          options: { sort: { createdAt: -1 } },
-        })
-        .populate({
-          path: "gallery",
-          options: { sort: { createdAt: -1 } },
-        });
+      const result = await VendorModel.findById(id).populate({
+        path: "feeds",
+        options: { sort: { createdAt: -1 } },
+      });
 
       if (!result) throw new Error("Vendor was not found");
 
+      const image = await takeUrl(result.image);
+      result.url = image;
       return result;
     } catch (error) {
       ErrorHandler(error);
@@ -346,7 +418,6 @@ class VendorRepo {
               customerInfo = { error: "Customer info unavailable" };
             }
           }
-
           return {
             order_status: order.order_status,
             total_amount: order.total_amount,
@@ -359,7 +430,6 @@ class VendorRepo {
       );
 
       const orders = await Promise.all(ordersPromises);
-
       const maxItems = withCustomerInfo ? 10 : orders.length - 1;
       return orders
         .filter((order) => order)
@@ -425,7 +495,14 @@ class VendorRepo {
       );
       if (!order) throw new Error("Error while finding order");
 
-      return order.orderItem;
+      const result = await Promise.all(
+        order.orderItem.map(async (item) => {
+          const image = await takeUrl(item.product_image);
+          item.product_image = image;
+          return item;
+        })
+      );
+      return result;
     } catch (error) {
       ErrorHandler(error);
     }
@@ -433,20 +510,29 @@ class VendorRepo {
 
   async GetAllVendor() {
     try {
-      const result = await VendorModel.find({}).populate("address").lean();
-      return result.map((vendor) => {
-        return {
-          name: vendor.name,
-          _id: vendor._id,
-          address: vendor.address,
-          email: vendor.email,
-          phone: vendor.phone,
-          image: vendor.image,
-          workingHrs: vendor.workingHrs,
-          rating: vendor.rating,
-          socialUrls: vendor.socialMedia,
-        };
-      });
+      const result = await VendorModel.find();
+      console.log(result);
+      if (!result) throw new Error("Vendors' list is not available");
+
+      return await Promise.all(
+        result.map(async (vendor) => {
+          const url = `http://localhost:8007/file?title=${vendor.image}`;
+          const image = await makeRequestWithRetries(url, "GET");
+          if (!image) throw new Error("Error while taken image");
+          vendor.image = image;
+          return {
+            name: vendor.name,
+            _id: vendor._id,
+            address: vendor.address,
+            email: vendor.email,
+            phone: vendor.phone,
+            image: vendor.image,
+            workingHrs: vendor.workingHrs,
+            rating: vendor.rating,
+            socialUrls: vendor.socialMedia,
+          };
+        })
+      );
     } catch (error) {
       ErrorHandler(error);
     }
@@ -470,8 +556,22 @@ class VendorRepo {
         pageSize: limit,
         totalCount: totalFeeds,
       };
+
+      const vendorFeeds = await Promise.all(
+        feedbacks
+          .sort((a, b) => b.feedId - a.feedId)
+          .map(async (feed) => {
+            const imageAuthor = await takeUrl(feed.authorImg);
+            const imageTarget = await takeUrl(feed.targetImg);
+
+            feed.authorImg = imageAuthor;
+            feed.targetImg = imageTarget;
+
+            return feed;
+          })
+      );
       return {
-        vendorFeeds: feedbacks.sort((a, b) => b.feedId - a.feedId),
+        vendorFeeds,
         pagination,
       };
     } catch (error) {
@@ -532,11 +632,45 @@ class VendorRepo {
 
   async VendorData(id: string, amount: number) {
     try {
-      const vendorFeeds = await FeedsModel.find({ forVendorId: id });
+      const vendorFeeds = await FeedsModel.find({ forVendorId: id }).limit(
+        amount
+      );
       if (!vendorFeeds)
         throw new Error("Data is not available or vendor has any feedback");
 
-      return vendorFeeds.sort((a, b) => b.feedId - a.feedId).slice(0, amount);
+      const result = await Promise.all(
+        vendorFeeds
+          .sort((a, b) => b.feedId - a.feedId)
+          .map(async (feed) => {
+            const authorImg = await takeUrl(feed.authorImg);
+            const targetImg = await takeUrl(feed.targetImg);
+
+            feed.authorImg = authorImg;
+            feed.targetImg = targetImg;
+
+            return feed;
+          })
+      );
+      return result;
+    } catch (error) {
+      ErrorHandler(error);
+    }
+  }
+
+  async GetFoods(id: string) {
+    try {
+      console.log(id);
+
+      const foods = await FoodsModel.find({ forVendor: id });
+      if (!foods) throw new Error("Data is not available");
+      const result = await Promise.all(
+        foods.map(async (food) => {
+          const image = await takeUrl(food.image);
+          food.url = image;
+          return food;
+        })
+      );
+      return result;
     } catch (error) {
       ErrorHandler(error);
     }
@@ -863,16 +997,42 @@ class VendorRepo {
 
   async GetGallery(vendorId: string) {
     try {
-      const vendor = await VendorModel.findById(vendorId)
-        .populate({
-          path: "gallery",
-          options: { sort: { createdAt: -1 } },
+      const gallery = await GalleryModel.find({ userId: vendorId });
+
+      if (!gallery) throw new Error("Error retrieve gallery");
+
+      const result = await Promise.all(
+        gallery.map(async (img) => {
+          const url = `http://localhost:8007/file?title=${img.title}`;
+          const image = await makeRequestWithRetries(url, "GET");
+          if (!image) throw new Error("Error while taken image");
+          img.url = image;
+          return img;
         })
-        .lean();
+      );
 
-      if (!vendor) throw new Error("Error retrieve gallery");
+      return result.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } catch (error) {
+      ErrorHandler(error);
+    }
+  }
 
-      return vendor.gallery;
+  async UpdateProfile(vendorId: string, photoTitle: string) {
+    try {
+      const vendor = await VendorModel.findById(vendorId);
+
+      if (!vendor) throw new Error("Vendor was not found");
+      vendor.image = photoTitle;
+      await vendor.save();
+      const url = `http://localhost:8007/file?title=${vendor.image}`;
+      const image = await makeRequestWithRetries(url, "GET");
+      if (!image) throw new Error("Error while taken image");
+
+      vendor.image = image;
+      return vendor.image;
     } catch (error) {
       ErrorHandler(error);
     }
@@ -885,20 +1045,23 @@ class VendorRepo {
       }).lean();
 
       if (!vendor) throw new Error("Error retrieve vendor");
+
+      const imgUrl = await takeUrl(vendor.image);
+
       const url = `http://localhost:8007/coords/${vendorAddress}`;
       const coords: { latitude: number; longitude: number } =
         await makeRequestWithRetries(url, "GET");
 
       if (coords) {
         const { latitude, longitude } = coords;
-        const { name, address, rating, phone, email, image } = vendor;
+        const { name, address, rating, phone, email } = vendor;
         return {
           name,
           address,
           rating,
           phone,
           email,
-          image,
+          image: imgUrl,
           latitude,
           longitude,
         };
@@ -975,7 +1138,7 @@ class VendorRepo {
     }
   }
 
-  async deletePhotoFromVendorGallery(photo: RemovePhotoMsg) {
+  async deletePhotoFromVendorGallery(photo: ImageMessageType) {
     try {
       const vendor = await VendorModel.findById(photo.userId);
 
@@ -1001,7 +1164,7 @@ class VendorRepo {
 
   async createFood(input: FoodMessageType) {
     try {
-      const newFood = await FoodsModel.create(input);
+      const newFood = await FoodsModel.create({ ...input, url: null });
       if (!newFood) throw new Error("Error while creating a new feeds");
 
       const savedFood = await newFood.save();

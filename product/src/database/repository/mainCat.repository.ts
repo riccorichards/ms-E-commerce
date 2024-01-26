@@ -19,8 +19,10 @@ class MainCatRepo {
       log.error({ err: error.message });
     }
   }
+
   async getMainCatById(id: number) {
     try {
+      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ");
       return await initialize.MainCat.findByPk(id, {
         include: [
           {
@@ -33,6 +35,7 @@ class MainCatRepo {
       log.error({ err: error.message });
     }
   }
+
   async updateMainCat(id: number, input: MainCatInputType) {
     try {
       const [rows] = await initialize.MainCat.update(input, { where: { id } });

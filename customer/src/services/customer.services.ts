@@ -11,10 +11,13 @@ import {
   UpdateUserInput,
   UploadFileType,
 } from "../database/types/types.customer";
-import { FeedbackMessageType } from "../database/types/types.feedback";
 import log from "../utils/logger";
 import { EventType } from "../database/types/type.event";
 import { CreateUserSchemaType } from "../api/middleware/validation/user.validation";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackWithDaliverymanPhotoMessage,
+} from "../database/types/type.feedback";
 
 class CustomerService {
   private repository: CustomerRepo;
@@ -130,9 +133,20 @@ class CustomerService {
 
   async CustomerFeedsService(id: string, page: number | string) {
     try {
-      const specificData = await this.repository.CustomerFeeds(
-        id,
-        page
+      const specificData = await this.repository.CustomerFeeds(id, page);
+
+      return specificData;
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
+
+  async UpdateFeedWithDeliverymanPhotoService(
+    msg: UpdateFeedbackWithDaliverymanPhotoMessage
+  ) {
+    try {
+      const specificData = await this.repository.UpdateFeedWithDeliverymanPhoto(
+        msg
       );
 
       return specificData;
@@ -191,13 +205,18 @@ class CustomerService {
           this.ManageCart(event.data as CartMessageType);
           break;
         case "empty_cart":
-          this.AddOrderAndMakeEmptyCart(event.data.userId);
+          this.AddOrderAndMakeEmptyCart(event.data.userId as string);
           break;
         case "add_feedback":
           this.ManageReview(event.data as FeedbackMessageType);
           break;
         case "upload_profile_url":
           this.UploadProfile(event.data as UploadFileType);
+          break;
+        case "update_deliveryman_photo":
+          this.UpdateFeedWithDeliverymanPhotoService(
+            event.data as UpdateFeedbackWithDaliverymanPhotoMessage
+          );
           break;
         default:
           log.info(`Unhandled event type: ${event.type}`);

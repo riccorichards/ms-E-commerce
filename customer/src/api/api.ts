@@ -7,13 +7,14 @@ import { get, omit } from "lodash";
 import { deserializeUser } from "./middleware/deserializeUser";
 import { requestUser } from "./middleware/requestUser";
 import { Channel } from "amqplib";
-import { SubscribeMessage } from "../utils/rabbitMQ.utils";
+import { PublishMessage, SubscribeMessage } from "../utils/rabbitMQ.utils";
 import { CreateUserSchema } from "./middleware/validation/user.validation";
 import { validateIncomingData } from "./middleware/validateResources";
 import { CreateSessionSchema } from "./middleware/validation/session.validation";
 import { CreateAddressSchema } from "./middleware/validation/address.validation";
 import { CreateBankAccSchema } from "./middleware/validation/bankAcc.validation";
 import { generateNewAccessToken } from "../utils/token.utils";
+import { BindingKeysType } from "../database/types/type.event";
 
 const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
@@ -144,6 +145,7 @@ const api = (app: Application, channel: Channel) => {
           return res
             .status(400)
             .json({ msg: "Customer was not found on that ID" });
+
         return res.status(200).json(result);
       } catch (error) {
         log.error("Server Internal" + error);
@@ -195,9 +197,44 @@ const api = (app: Application, channel: Channel) => {
       const updatedUser = await service.UpdateUserProfile(userId, req.body);
       if (!updatedUser)
         return res.status(404).json({ err: "Error with updating process" });
-      return res
-        .status(201)
-        .json({ customer: omit(updatedUser.toJSON(), "password"), ttl: 1800 });
+
+      const event = {
+        type: "update_customer_info",
+        data: {
+          userId,
+          updatedImage: updatedUser.image,
+          updatedUsername: updatedUser.username,
+          updatedEmail: updatedUser.email,
+          updatedAddress: updatedUser.address,
+        },
+      };
+
+      const binding_keys_wrapper: BindingKeysType = {
+        feedback: config.feedback_binding_key,
+        vendor: config.vendor_binding_key,
+        deliveryman: config.deliveryman_binding_key,
+      };
+
+      if (channel) {
+        for (const key in binding_keys_wrapper) {
+          PublishMessage(
+            channel,
+            binding_keys_wrapper[key],
+            JSON.stringify(event)
+          );
+        }
+
+        PublishMessage(
+          channel,
+          config.shopping_binding_key,
+          JSON.stringify(event)
+        );
+      }
+
+      return res.status(201).json({
+        customer: omit(updatedUser.toJSON(), "password"),
+        ttl: 1800,
+      });
     } catch (error: any) {
       log.error("Server Internal" + error);
       return res.status(500).json({ err: error, msg: "Server Internal" });

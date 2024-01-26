@@ -60,3 +60,10 @@ export async function getCustomerInfo(customerId: string) {
   if (!customer) throw new Error("Customer was not found");
   return customer;
 }
+
+export async function takeUrl(title: string) {
+  const url = `http://localhost:8007/file?title=${title}`;
+  const image = await makeRequestWithRetries(url, "GET");
+  if (!image) throw new Error("Error while takeing new url");
+  return image;
+}

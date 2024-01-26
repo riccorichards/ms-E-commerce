@@ -3,6 +3,7 @@ import { IncomingSubCatValidationType } from "../../api/middleware/validation/su
 import log from "../../utils/logger";
 import initialize from "../initialize";
 import { SubCatInputType } from "../types/types.subCategory";
+import { makeRequestWithRetries } from "../../utils/makeRequestWithRetries";
 
 class subCatRepo {
   async createSubCut(
@@ -46,12 +47,10 @@ class subCatRepo {
 
   async getMainCatSubCats(id: number) {
     try {
-      const result = await initialize.SubCat.findAll({
+      return await initialize.SubCat.findAll({
         where: { mainCatId: id },
         include: [{ model: initialize.Product, as: "Products" }],
       });
-
-      return result;
     } catch (error: any) {
       log.error({ err: error.message });
     }

@@ -3,6 +3,7 @@ export interface DeliveryType {
   email: string;
   password: string;
   image: string;
+  url: string | null;
   isValid: boolean;
   currentAddress: string;
 }

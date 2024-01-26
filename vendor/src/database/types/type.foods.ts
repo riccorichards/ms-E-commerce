@@ -5,6 +5,7 @@ export interface FoodMessageType {
   desc: string;
   price: string;
   image: string;
+  url: string | null;
   discount: number;
   forVendor: string;
   foodId: number;

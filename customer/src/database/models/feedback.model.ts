@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { FeedbackDocType } from "../types/types.feedback";
+import { FeedbackDocType } from "../types/type.feedback";
 
 const feedback = new mongoose.Schema(
   {

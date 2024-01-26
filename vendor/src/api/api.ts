@@ -103,30 +103,26 @@ const api = (app: Application, channel: Channel) => {
   );
 
   //get vendor's data
-  app.get(
-    "/vendor-feeds",
-    [deserializeUser, requestUser],
-    async (req: Request, res: Response) => {
-      try {
-        const vendorId = res.locals.vendor.vendor;
-        const amount =
-          typeof req.query.amount === "string"
-            ? parseInt(req.query.amount, 10)
-            : 0;
+  app.get("/vendor-feeds/:vendorId", async (req: Request, res: Response) => {
+    try {
+      const vendorId = req.params.vendorId;
+      const amount =
+        typeof req.query.amount === "string"
+          ? parseInt(req.query.amount, 10)
+          : 0;
 
-        if (!query) return res.status(400).json({ msg: "Bad request" });
+      if (!query) return res.status(400).json({ msg: "Bad request" });
 
-        const vendor = await service.VendorDataService(vendorId, amount);
+      const vendor = await service.VendorDataService(vendorId, amount);
 
-        if (vendor === null)
-          return res.status(404).json({ err: "Vendor not found" });
+      if (vendor === null)
+        return res.status(404).json({ err: "Vendor not found" });
 
-        return res.status(200).json(vendor);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
+      return res.status(200).json(vendor);
+    } catch (error) {
+      ApiErrorHandler(error, res);
     }
-  );
+  });
 
   app.get(
     "/additional-info/:vendorId?",
@@ -227,6 +223,39 @@ const api = (app: Application, channel: Channel) => {
 
       return res.status(201).json(topVendors);
     } catch (error) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  //retrieve vendor's gallery
+  app.get("/vendor-gallery/:vendorId", async (req: Request, res: Response) => {
+    try {
+      const vendorId = req.params.vendorId;
+      const vendorGallery = await service.GetGallery(vendorId);
+      if (!vendorGallery)
+        return res
+          .status(404)
+          .json({ err: "Error with retrieve vendor with its gallery" });
+
+      return res.status(200).json(vendorGallery);
+    } catch (error: any) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  //retrieve vendor's food
+  app.get("/vendor-products/:vendorId", async (req: Request, res: Response) => {
+    try {
+      const vendorId = req.params.vendorId;
+      const foods = await service.GetFoodsService(vendorId);
+
+      if (!foods)
+        return res
+          .status(404)
+          .json({ err: "Error with retrieve vendor's with its " });
+
+      return res.status(200).json(foods);
+    } catch (error: any) {
       ApiErrorHandler(error, res);
     }
   });
@@ -357,7 +386,30 @@ const api = (app: Application, channel: Channel) => {
       }
     }
   );
-  //
+
+  // add address
+  app.post(
+    "/add-vendor-address",
+    validateIncomingData(CreateAddressSchema),
+    async (req: Request, res: Response) => {
+      try {
+        const vendorId = res.locals.vendor.vendor;
+        const updatedVendorTeam = await service.AddVendorAddressService(
+          vendorId,
+          req.body
+        );
+        if (!updatedVendorTeam)
+          return res
+            .status(404)
+            .json({ err: "Error while addig the vendor's address" });
+        return res.status(201).json(updatedVendorTeam);
+      } catch (error) {
+        ApiErrorHandler(error, res);
+      }
+    }
+  );
+
+  // createa bio
   app.post(
     "/vendor-bio",
     validateIncomingData(BioValidation),
@@ -424,8 +476,27 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
-  //retrieve vendor's gallery
-  app.get("/vendor-gallery", async (req: Request, res: Response) => {
+  app.put("/vendor-profile", async (req: Request, res: Response) => {
+    try {
+      const vendorId = res.locals.vendor.vendor;
+      const photoTitle = req.body.photoTitle;
+      const vendorImage = await service.UpdateProfileService(
+        vendorId,
+        photoTitle
+      );
+      if (!vendorImage)
+        return res
+          .status(404)
+          .json({ err: "Error while updating vendor's profile image" });
+
+      return res.status(200).json(vendorImage);
+    } catch (error: any) {
+      ApiErrorHandler(error, res);
+    }
+  });
+
+  //retrieve vendor's team members
+  app.get("/vendor-team", async (req: Request, res: Response) => {
     try {
       const vendorId = res.locals.vendor.vendor;
       const vendorGallery = await service.GetGallery(vendorId);
@@ -433,6 +504,7 @@ const api = (app: Application, channel: Channel) => {
         return res
           .status(404)
           .json({ err: "Error with retrieve vendor with its gallery" });
+
       return res.status(200).json(vendorGallery);
     } catch (error: any) {
       ApiErrorHandler(error, res);
@@ -442,7 +514,6 @@ const api = (app: Application, channel: Channel) => {
   app.get("/vendor-orders", async (req: Request, res: Response) => {
     try {
       const withCustomerInfo = req.query.withCustomerInfo === "true";
-
       const vendorId = res.locals.vendor.vendor;
       const vendorOrders = await service.GetVendorOrdersService(
         vendorId,
@@ -452,7 +523,6 @@ const api = (app: Application, channel: Channel) => {
         return res
           .status(404)
           .json({ err: "Error with retrieve vendor with its orders" });
-
       return res.status(200).json(vendorOrders);
     } catch (error: any) {
       ApiErrorHandler(error, res);

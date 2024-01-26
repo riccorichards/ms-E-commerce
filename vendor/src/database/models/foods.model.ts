@@ -7,8 +7,10 @@ const foods = new mongoose.Schema(
     desc: { type: String },
     price: { type: String },
     image: { type: String },
+    url: { type: String, default: null },
     discount: { type: Number },
     foodId: { type: Number },
+    forVendor: { type: String },
   },
   { timestamps: true }
 );

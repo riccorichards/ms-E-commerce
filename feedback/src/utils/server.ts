@@ -7,7 +7,7 @@ import config from "../../config";
 import { appDataSource } from "../database/connectToTypeOrm";
 import log from "./logger";
 
-const createServer = () => {
+const createServer = async () => {
   const app = express();
   dotenv.config();
   app.use(express.json());
@@ -24,6 +24,7 @@ const createServer = () => {
     .catch((err) =>
       log.error({ msg: "Error during Data Source initialization", err: err })
     );
+
   api(app);
   return app;
 };

@@ -3,8 +3,9 @@ import { GalleryDocument } from "../types/type.gallery";
 
 const gallery = new mongoose.Schema(
   {
-    url: { type: String },
     title: { type: String },
+    userId: { type: String },
+    url: { type: String },
   },
   { timestamps: true }
 );

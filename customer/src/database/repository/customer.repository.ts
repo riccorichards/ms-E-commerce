@@ -14,13 +14,20 @@ import {
 import log from "../../utils/logger";
 import { WishlistMessageType } from "../types/type.wishlist";
 import { CartMessageType } from "../types/type.cart";
-import { FeedbackMessageType } from "../types/types.feedback";
 import SessionModel from "../models/session.model";
 import { omit } from "lodash";
 import BankModel from "../models/bank.model";
 import { CreateUserSchemaType } from "../../api/middleware/validation/user.validation";
 import bcrypt from "bcrypt";
 import FeedbackModel from "../models/feedback.model";
+import {
+  makeRequestWithRetries,
+  takeUrl,
+} from "../../utils/makeRequestWithRetries";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackWithDaliverymanPhotoMessage,
+} from "../types/type.feedback";
 
 class CustomerRepo {
   async CreateCustomer(input: CreateUserSchemaType) {
@@ -48,6 +55,7 @@ class CustomerRepo {
       const user = await UserModel.findOne({ email: input.email })
         .populate("address")
         .populate("bank");
+
       if (!user) {
         throw new Error("Wrong credentials");
       }
@@ -62,8 +70,11 @@ class CustomerRepo {
         user: user._id,
         userAgent,
       });
-
-      return { user, newSession };
+      const result = {
+        user,
+        newSession,
+      };
+      return result;
     } catch (error: any) {
       throw new Error(error.message);
     }
@@ -133,7 +144,27 @@ class CustomerRepo {
           { new: true }
         );
       } else {
-        return await UserModel.findByIdAndUpdate(query, input, { new: true });
+        const updatedCustomerInfo = await UserModel.findByIdAndUpdate(
+          query,
+          input,
+          { new: true }
+        );
+        if (!updatedCustomerInfo)
+          throw new Error("Error while updating customer info");
+        const image = await takeUrl(updatedCustomerInfo.image);
+        updatedCustomerInfo.url = image;
+
+        const customerFeedbacks = await FeedbackModel.find({ userId: query });
+
+        await Promise.all(
+          customerFeedbacks.map(async (feed) => {
+            feed.author = updatedCustomerInfo.username;
+            feed.authorImg = updatedCustomerInfo.image;
+
+            return await feed.save();
+          })
+        );
+        return updatedCustomerInfo;
       }
     } catch (error: any) {
       log.error({ err: error.message });
@@ -191,11 +222,30 @@ class CustomerRepo {
 
       if (!profile) throw new Error("Customer not found");
 
-      profile.image = input.url;
+      profile.image = input.title;
 
       await profile.save();
 
       return profile;
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+  async UpdateFeedWithDeliverymanPhoto(
+    input: UpdateFeedbackWithDaliverymanPhotoMessage
+  ) {
+    try {
+      const feedbacks = await FeedbackModel.find({ targetId: input.userId });
+
+      if (!feedbacks) throw new Error("Feedbacks not found");
+
+      return await Promise.all(
+        feedbacks.map(async (feed) => {
+          feed.targetImg = input.title;
+          return await feed.save();
+        })
+      );
     } catch (error: any) {
       log.error({ err: error.message });
       throw error;
@@ -209,7 +259,13 @@ class CustomerRepo {
         .populate("bank");
 
       if (!profile) throw new Error("Profile was not found");
+      if (profile.isAdmin) {
+        return profile;
+      }
 
+      const image = await takeUrl(profile.image);
+
+      profile.url = image;
       return profile;
     } catch (error: any) {
       log.error({ err: error.message });
@@ -225,11 +281,13 @@ class CustomerRepo {
 
       const profileAddress = profile.address as PopulateAddress;
 
+      const image = await takeUrl(profile.image);
+      console.log(profile);
       const customerOrderInfo = {
         username: profile.username,
         address: profileAddress.street,
         email: profile.email,
-        image: profile.image,
+        image: image,
       };
       return customerOrderInfo;
     } catch (error: any) {
@@ -265,6 +323,16 @@ class CustomerRepo {
         if (!customerFeeds) {
           throw new Error("Not found feeds or data is not available");
         }
+        const feedResult = await Promise.all(
+          customerFeeds.map(async (feed) => {
+            const authorImage = await takeUrl(feed.authorImg);
+            const targetImage = await takeUrl(feed.targetImg);
+            feed.authorImg = authorImage;
+            feed.targetImg = targetImage;
+
+            return feed;
+          })
+        );
         const totalPages = Math.ceil(totalFeeds / limit);
         const pagination = {
           page,
@@ -272,7 +340,7 @@ class CustomerRepo {
           pageSize: limit,
           totalCount: totalFeeds,
         };
-        return { feedResult: customerFeeds, pagination };
+        return { feedResult, pagination };
       }
     } catch (error: any) {
       log.error({ err: error.message });

@@ -1,4 +1,4 @@
-import { FeedbacksDocsType } from "./types.feedbacks";
+import { FeedbacksDocsType } from "./types.feedback";
 
 export interface EventType {
   type: string;

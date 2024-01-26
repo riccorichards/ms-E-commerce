@@ -1,14 +1,19 @@
+import { error } from "console";
 import {
   IncomingProductType,
   IncomingProductUpdateValidationType,
 } from "../../api/middleware/validation/product.validation";
 import log from "../../utils/logger";
+import {
+  makeRequestWithRetries,
+  takeUrl,
+} from "../../utils/makeRequestWithRetries";
 import initialize from "../initialize";
 
 class ProductRepo {
   async createProduct(input: IncomingProductType["body"]) {
     try {
-      return await initialize.Product.create(input);
+      return await initialize.Product.create({ ...input, url: null });
     } catch (error: any) {
       log.error({
         err: error.message,
@@ -24,14 +29,19 @@ class ProductRepo {
       const totalProductsCount = await initialize.Product.count();
 
       const { rows } = await initialize.Product.findAndCountAll({
-        include: [{ model: initialize.Feedbacks, as: "feedbacks" }],
         limit,
         offset,
       });
       const totalPages = Math.ceil(totalProductsCount / limit);
 
+      const result = rows.map(async (product) => {
+        const image = await takeUrl(product.image);
+        product.url = image;
+        return product;
+      });
+
       return {
-        products: rows,
+        products: await Promise.all(result),
         pagination: {
           page,
           totalPages,
@@ -46,11 +56,52 @@ class ProductRepo {
     }
   }
 
+  async getProductsFeeds(productId: number) {
+    try {
+      let feeds = await initialize.Feedbacks.findAll({
+        where: { targetId: productId },
+      });
+
+      if (!feeds) throw new Error("Food data is not available or Not found");
+
+      feeds = feeds.sort((a, b) => b.id - a.id);
+
+      const result = feeds.map(async (feed) => {
+        const image = await takeUrl(feed.authorImg || "");
+
+        feed.authorImg = image;
+
+        return feed;
+      });
+      const feedResult = await Promise.all(result);
+
+      return feedResult.map((feed) => {
+        return {
+          image: feed.authorImg,
+          feed: feed.review,
+          id: feed.id,
+        };
+      });
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+
   async getVendorsProducts(vendorName: string) {
     try {
-      return await initialize.Product.findAll({
+      let foods = await initialize.Product.findAll({
         where: { vendor_name: vendorName },
       });
+      if (!foods) throw new Error("Food data is not available or Not found");
+      foods = foods.sort((a, b) => b.id - a.id);
+      const result = foods.map(async (product) => {
+        const image = await takeUrl(product.image);
+        product.url = image;
+        return product;
+      });
+      return await Promise.all(result.slice(0, 5));
     } catch (error: any) {
       log.error({
         err: error.message,
@@ -70,9 +121,7 @@ class ProductRepo {
 
   async getProductById(id: number) {
     try {
-      return await initialize.Product.findByPk(id, {
-        include: [{ model: initialize.Feedbacks, as: "feedbacks" }],
-      });
+      return await initialize.Product.findByPk(id);
     } catch (error: any) {
       log.error({
         err: error.message,

@@ -2,6 +2,7 @@ import { Repository } from "typeorm";
 import Feedbacks from "../entities/feedback.entity";
 import log from "../../utils/logger";
 import { FeedbackValidation } from "../validation/feedback.validation";
+import { takeUrl } from "../../utils/makeRequestWithRetries";
 
 class FeedbackRepo {
   constructor(private repository: Repository<Feedbacks>) {}
@@ -20,11 +21,43 @@ class FeedbackRepo {
     }
   }
 
-  async GetFeedbacks(userId: string) {
+  async CustomerFeeds(customerId: string, page: number) {
     try {
-      const feedbacks = this.repository.find({ where: { userId: userId } });
+      const take = 5;
+      const skip = (page - 1) * take;
+
+      const [feedbacks, feedbackCount] = await this.repository.findAndCount({
+        where: { userId: customerId },
+        take,
+        skip,
+      });
+
       if (!feedbacks) throw new Error("Error while fetching feeds (in repo)");
-      return feedbacks;
+      const totalPages = Math.ceil(feedbackCount / take);
+      const pagination = {
+        page,
+        totalPages,
+        pageSize: take,
+        totalCount: feedbackCount,
+      };
+
+      const feedResult = await Promise.all(
+        feedbacks.map(async (feed) => {
+          const targetImage = await takeUrl(feed.targetImg);
+          if (!targetImage)
+            throw new Error("Error while taken the target image");
+
+          const authorImage = await takeUrl(feed.authorImg);
+          if (!authorImage)
+            throw new Error("Error while taken the author image");
+
+          feed.authorImg = authorImage;
+          feed.targetImg = targetImage;
+
+          return feed;
+        })
+      ).then((res) => res.sort((a, b) => b.id - a.id));
+      return { feedResult, pagination };
     } catch (error: any) {
       log.error(error);
     }
@@ -60,7 +93,6 @@ class FeedbackRepo {
       throw error;
     }
   }
-
 
   async RemoveFeedback(id: number) {
     try {

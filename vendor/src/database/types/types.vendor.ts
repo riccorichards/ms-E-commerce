@@ -14,6 +14,7 @@ export interface VendorType {
   pincode: string;
   phone: string;
   image: string;
+  url: string;
   rating: number;
   email: string;
   password: string;

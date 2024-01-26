@@ -11,7 +11,9 @@ class Delivery
   public password!: string;
   public isValid!: boolean;
   public image!: string;
+  public url!: string | null;
   public currentAddress!: string;
+  public createdAt!: Date;
 }
 
 export const DeliveryModel = (sequelize: Sequelize) => {
@@ -26,13 +28,15 @@ export const DeliveryModel = (sequelize: Sequelize) => {
       name: { type: DataTypes.STRING, allowNull: false },
       password: { type: DataTypes.STRING, allowNull: false },
       email: { type: DataTypes.STRING, allowNull: false, unique: true },
-      image: { type: DataTypes.TEXT, allowNull: false },
+      image: { type: DataTypes.STRING, allowNull: false },
+      url: { type: DataTypes.STRING, defaultValue: null },
       isValid: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
       },
       currentAddress: { type: DataTypes.STRING, allowNull: false },
+      createdAt: { type: DataTypes.DATE, allowNull: false },
     },
     { sequelize, modelName: "deliveries", timestamps: true }
   );

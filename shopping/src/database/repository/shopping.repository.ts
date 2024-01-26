@@ -13,7 +13,11 @@ import {
   sendAddressesToCloudManager,
 } from "../../services/helper.service";
 import _ from "lodash";
-import { makeRequestWithRetries } from "../../utils/makeRequestWithRetries";
+import {
+  makeRequestWithRetries,
+  takeUrl,
+} from "../../utils/makeRequestWithRetries";
+import { MessageType } from "../../services/shopping.service";
 
 class ShoppingRepo {
   constructor(
@@ -292,6 +296,21 @@ class ShoppingRepo {
     }
   }
 
+  async UpdateCustomerInfo(msg: MessageType) {
+    try {
+      const orders = await this.orderRepository.find({
+        where: { customerId: msg.userId },
+      });
+
+      if (!orders) throw new Error("Data is not available");
+
+      return orders.map((order) => {});
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+
   async GetOrdersByDeliveryName(name: string) {
     try {
       const orders = await this.orderRepository.find({
@@ -329,7 +348,16 @@ class ShoppingRepo {
       });
       if (!order)
         throw new Error("Order was not found with that ID:" + orderId);
-      return order;
+
+      const result = await Promise.all(
+        order.orderItem.map(async (item) => {
+          const image = await takeUrl(item.product_image);
+          item.product_image = image;
+          return item;
+        })
+      );
+
+      return { ...order, orderItem: result };
     } catch (error: any) {
       log.error({ err: error.message });
       throw new Error(`Error cancelling order: ${error.message}`);

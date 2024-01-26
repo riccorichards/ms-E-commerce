@@ -29,7 +29,7 @@ const api = async (app: Application) => {
     uploadFile,
     async (req: Request, res: Response) => {
       try {
-        const { type, isSendToService, address } = req.body;
+        const { type, toShare, address } = req.body;
         const file = req.file;
 
         let targetUser;
@@ -43,8 +43,9 @@ const api = async (app: Application) => {
           case "deliveryman":
             targetUser = req.user?.deliverymanId;
         }
-        console.log({ targetUser }, "<<<<<<<<<<< User type");
+
         if (!file) return res.status(404).json("File Not Uploaded");
+
         const webPBuffer = await convertImageToWebP(file);
 
         const folderName =
@@ -65,6 +66,7 @@ const api = async (app: Application) => {
         const result = await GenerateImageUrl(webExtansion);
 
         const targetType = { targetAddress: "", targetPath: "" };
+
         switch (address) {
           case "customer":
             targetType.targetAddress = "upload_profile_url";
@@ -86,6 +88,9 @@ const api = async (app: Application) => {
             targetType.targetAddress = "upload_deliveryman_profile";
             targetType.targetPath = config.deliveryman_binding_key;
             break;
+          case "foods":
+            targetType.targetAddress = "upload_product_image";
+            targetType.targetPath = config.product_binding_key;
         }
 
         const event = {
@@ -93,26 +98,34 @@ const api = async (app: Application) => {
           data:
             type === "gallery"
               ? {
-                  photo: result,
-                  targetUser,
+                  title: result.title,
+                  userId: targetUser,
                 }
               : {
-                  url: result.url,
+                  title: result.title,
                   userId: targetUser,
                 },
         };
 
-        if (!Boolean(parseInt(isSendToService))) {
+        if (Boolean(parseInt(toShare))) {
           if (channel) {
             PublishMessage(
               channel,
               targetType.targetPath,
               JSON.stringify(event)
             );
+            PublishMessage(
+              channel,
+              config.customer_binding_key,
+              JSON.stringify({
+                type: "update_deliveryman_photo",
+                data: { title: result.title, userId: targetUser },
+              })
+            );
           }
         }
 
-        return res.status(201).json(type === "gallery" ? result : result.url);
+        return res.status(201).json({ ...result, type });
       } catch (error) {
         if (error instanceof MulterError) {
           log.info(error.message);
@@ -122,6 +135,23 @@ const api = async (app: Application) => {
       }
     }
   );
+
+  app.get("/file", async (req: Request, res: Response) => {
+    try {
+      const title =
+        typeof req.query.title === "string" ? req.query.title : null;
+      if (!title) return res.status(500).json("Invalid query:" + title);
+      const file = await GenerateImageUrl(title);
+      if (!file)
+        return res
+          .status(404)
+          .json({ msg: "Error while generating signed url" });
+
+      return res.status(201).json(file.url);
+    } catch (error) {
+      return res.status(500).json(error);
+    }
+  });
 
   app.put("/del-photo", verifyJWT, async (req: Request, res: Response) => {
     try {

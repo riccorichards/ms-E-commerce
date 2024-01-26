@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     image: { type: String },
+    url: { type: String, default: null },
     bonus: { type: Number, default: 0 },
     isAdmin: { type: Boolean, default: false },
     bank: { type: mongoose.Schema.Types.ObjectId, ref: "Bank" },
@@ -37,7 +38,6 @@ const UserSchema = new mongoose.Schema(
         unit: { type: Number, required: true },
       },
     ],
-    feedback: [{ type: mongoose.Schema.Types.ObjectId, ref: "Feedback" }],
   },
   {
     timestamps: true,

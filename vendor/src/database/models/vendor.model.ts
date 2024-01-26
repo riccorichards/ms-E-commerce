@@ -14,6 +14,7 @@ const VendorSchema = new mongoose.Schema(
     image: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String, required: true },
+    url: { type: String, default: null },
     password: { type: String, required: true },
     address: { type: String },
     teamMember: [{ type: mongoose.Schema.Types.ObjectId, ref: "teamMember" }],

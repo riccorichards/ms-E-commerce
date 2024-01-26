@@ -3,7 +3,7 @@ import initialize from "../initialize";
 import {
   FeedbackMessageType,
   UpdateFeedbackMessageType,
-} from "../types/types.feedbacks";
+} from "../types/types.feedback";
 
 class FeedbacksRepo {
   async createFeedback(input: FeedbackMessageType) {

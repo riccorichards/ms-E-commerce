@@ -1,5 +1,10 @@
-import { IsIn, IsNumber, IsString } from "class-validator";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { IsIn, IsNumber, IsString, IsDate } from "class-validator";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 
 @Entity("feedbacks")
 class Feedbacks {
@@ -46,6 +51,10 @@ class Feedbacks {
   @Column({ type: "float", nullable: true })
   @IsNumber()
   vendorRating: number;
+
+  @CreateDateColumn()
+  @IsDate()
+  createdAt: Date;
 }
 
 export default Feedbacks;

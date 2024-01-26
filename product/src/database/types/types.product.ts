@@ -6,6 +6,7 @@ export interface ProductInputType {
   address: string;
   vendor_rating: number;
   image: string;
+  url: string | null;
   discount: string;
   subCatId: number;
 }

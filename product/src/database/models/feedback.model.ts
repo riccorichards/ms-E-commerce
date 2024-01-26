@@ -2,7 +2,7 @@ import { DataTypes, Model, Sequelize } from "sequelize";
 import {
   FeedbackMessageType,
   FeedbacksDocsType,
-} from "../types/types.feedbacks";
+} from "../types/types.feedback";
 
 class Feedbacks
   extends Model<FeedbacksDocsType, FeedbackMessageType>

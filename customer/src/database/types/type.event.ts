@@ -1,7 +1,10 @@
 import { CartMessageType } from "./type.cart";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackWithDaliverymanPhotoMessage,
+} from "./type.feedback";
 import { WishlistMessageType } from "./type.wishlist";
 import { UploadFileType } from "./types.customer";
-import { FeedbackMessageType } from "./types.feedback";
 
 export interface EventType {
   type: string;
@@ -9,5 +12,10 @@ export interface EventType {
     | WishlistMessageType
     | FeedbackMessageType
     | CartMessageType
-    | UploadFileType;
+    | UploadFileType
+    | UpdateFeedbackWithDaliverymanPhotoMessage;
+}
+
+export interface BindingKeysType {
+  [key: string]: string;
 }

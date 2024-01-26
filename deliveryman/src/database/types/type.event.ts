@@ -1,12 +1,19 @@
-import { FeedbackMessageType } from "./types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateCustomerInfoInFeedMessageType,
+} from "./types.feedbacks";
 import { OrderType } from "./types.orders";
 
 export interface EditImageMessage {
   userId: number;
-  url: string;
+  title: string;
 }
 
 export interface EventType {
   type: string;
-  data: FeedbackMessageType | EditImageMessage | OrderType;
+  data:
+    | FeedbackMessageType
+    | EditImageMessage
+    | OrderType
+    | UpdateCustomerInfoInFeedMessageType;
 }

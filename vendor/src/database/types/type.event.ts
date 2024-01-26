@@ -1,11 +1,10 @@
 import { FoodMessageType } from "./type.foods";
-import {
-  GalleryMessageType,
-  ImageMessageType,
-  RemovePhotoMsg,
-} from "./type.imageUrl";
+import { ImageMessageType } from "./type.imageUrl";
 import { MessageOrderType } from "./type.order";
-import { FeedbackMessageType } from "./types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateFeedbackWithCustomerInfo,
+} from "./types.feedbacks";
 
 export interface EventType {
   type: string;
@@ -13,7 +12,6 @@ export interface EventType {
     | FeedbackMessageType
     | FoodMessageType
     | ImageMessageType
-    | GalleryMessageType
-    | RemovePhotoMsg
-    | MessageOrderType;
+    | MessageOrderType
+    | UpdateFeedbackWithCustomerInfo;
 }

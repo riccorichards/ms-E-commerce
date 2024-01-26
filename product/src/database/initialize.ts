@@ -1,8 +1,8 @@
 import { ProductModel } from "./models/product.model";
-import { FeedbacksModal } from "./models/Feedbacks.model";
 import { MainCatModal } from "./models/mainCaterogy.model";
 import { SubCatModel } from "./models/subCaterogy.model";
 import { sequelize } from "./connectToSequelize";
+import { FeedbacksModal } from "./models/feedback.model";
 
 const Product = ProductModel(sequelize);
 const Feedbacks = FeedbacksModal(sequelize);

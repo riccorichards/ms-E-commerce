@@ -20,3 +20,8 @@ export interface FeedbackDocType
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface UpdateFeedbackWithDaliverymanPhotoMessage {
+  title: string;
+  userId: number;
+}

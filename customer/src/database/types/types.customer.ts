@@ -15,6 +15,7 @@ export interface UserInput {
   email: string;
   password: string;
   image: string;
+  url: string | null;
   isAdmin: boolean;
   bonus: number;
   address: mongoose.Schema.Types.ObjectId | PopulateAddress;
@@ -96,6 +97,6 @@ export interface SessionInputType {
 
 export interface UploadFileType {
   type: string;
-  url: string;
+  title: string;
   userId: string;
 }

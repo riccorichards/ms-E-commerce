@@ -1,11 +1,9 @@
 import { Channel, Message } from "amqplib";
-import FeedbacksRepo from "../database/repository/feedbacks.repository";
-import {
-  FeedbackMessageType,
-  UpdateFeedbackMessageType,
-} from "../database/types/types.feedbacks";
+
 import log from "../utils/logger";
-import { EventType } from "../database/types/type.event";
+import FeedbacksRepo from "../database/repository/feedback.repository";
+import { FeedbackMessageType, UpdateFeedbackMessageType } from "../database/types/types.feedback";
+import { EventType } from "../database/types/types.event";
 
 class FeedbacksService {
   private repository: FeedbacksRepo;

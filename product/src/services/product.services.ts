@@ -4,7 +4,6 @@ import {
   IncomingProductUpdateValidationType,
 } from "../api/middleware/validation/product.validation";
 import ProductRepo from "../database/repository/product.repository";
-import { EventType } from "../database/types/type.event";
 import log from "../utils/logger";
 
 class ProductService {
@@ -17,6 +16,16 @@ class ProductService {
   async createProductService(input: IncomingProductType["body"]) {
     try {
       return await this.repository.createProduct(input);
+    } catch (error: any) {
+      log.error({
+        err: error.message,
+      });
+    }
+  }
+
+  async getProductsFeedsService(productId: number) {
+    try {
+      return await this.repository.getProductsFeeds(productId);
     } catch (error: any) {
       log.error({
         err: error.message,

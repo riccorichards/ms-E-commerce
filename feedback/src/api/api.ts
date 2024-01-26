@@ -64,6 +64,7 @@ const api = async (app: Application) => {
             config.customer_binding_key,
             JSON.stringify(Customer_event)
           );
+
           if (bindingsKey) {
             PublishMessage(channel, bindingsKey, JSON.stringify(event));
           }
@@ -75,19 +76,6 @@ const api = async (app: Application) => {
       }
     }
   );
-
-  app.get("/feedback/:userId", async (req: Request, res: Response) => {
-    try {
-      const userId = req.params.userId;
-      const feebacks = await feedService.GetFeedsService(userId);
-      if (!feebacks)
-        return res.status(404).json({ msg: "Error while fetching feedbacks" });
-      return res.status(201).json(feebacks);
-    } catch (error: any) {
-      log.error(error.message);
-      return res.status(500).json({ msg: "Internal Server Error" });
-    }
-  });
 
   app.get(
     "/feedbacks-length",

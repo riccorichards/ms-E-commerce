@@ -2,7 +2,10 @@ import { Channel, Message } from "amqplib";
 import DeliveryRepo from "../database/repository/delivery.repository";
 import { DeliveryType } from "../database/types/type.delivery";
 import { LoginStyle } from "../database/types/type.session";
-import { FeedbackMessageType } from "../database/types/types.feedbacks";
+import {
+  FeedbackMessageType,
+  UpdateCustomerInfoInFeedMessageType,
+} from "../database/types/types.feedbacks";
 import { EditImageMessage, EventType } from "../database/types/type.event";
 import log from "../utils/logger";
 import { IncomingDeliveryDataType } from "../api/middleware/validation/deliveryman.validation";
@@ -37,7 +40,7 @@ class DeliveryService {
     return this.repository.createFeedback(input);
   }
 
-  async UpdateFeedbackService(input: FeedbackMessageType) {
+  async UpdateFeedbackService(input: UpdateCustomerInfoInFeedMessageType) {
     return this.repository.updateFeedback(input);
   }
 
@@ -89,15 +92,17 @@ class DeliveryService {
         case "add_feed_in_deliveryman":
           this.CreateFeedbackService(event.data as FeedbackMessageType);
           break;
-        case "update_feed_in_deliveryman":
-          this.UpdateFeedbackService(event.data as FeedbackMessageType);
-          break;
         case "remove_feed_from_deliveryman":
           const feed = event.data as FeedbackMessageType;
           this.DeleteFeedbackService(feed.feedId);
           break;
         case "upload_deliveryman_profile":
           this.EditImageSerivce(event.data as EditImageMessage);
+          break;
+        case "update_customer_info":
+          this.UpdateFeedbackService(
+            event.data as UpdateCustomerInfoInFeedMessageType
+          );
           break;
         default:
           log.info(`Unhandled event type: ${event.type}`);
