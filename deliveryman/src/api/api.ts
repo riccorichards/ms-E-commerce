@@ -139,7 +139,6 @@ const api = (app: Application, channel: Channel) => {
         return res
           .status(404)
           .json({ err: "Error while fetching delivery person" });
-      console.log(result);
       return res.status(200).json(result);
     } catch (error) {
       ApiErrorHandler(error, res);

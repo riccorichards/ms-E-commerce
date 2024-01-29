@@ -11,7 +11,10 @@ import ErrorHandler, { ValidateIncomingData } from "./ErrorHandler";
 import { CreateChannel, PublishMessage } from "../utils/rabbitMQ.utils";
 import config from "../../config";
 import _ from "lodash";
-import { makeRequestWithRetries } from "../utils/makeRequestWithRetries";
+import {
+  makeRequestWithRetries,
+  takeUrl,
+} from "../utils/makeRequestWithRetries";
 
 const api = async (app: Application) => {
   const shoppingRepo = new ShoppingRepo(
@@ -47,6 +50,7 @@ const api = async (app: Application) => {
     async (req: Request, res: Response) => {
       try {
         const newOrder = await service.CreateOrderService(req.body);
+
         if (!newOrder)
           return res
             .status(404)
@@ -56,6 +60,7 @@ const api = async (app: Application) => {
           type: "empty_cart",
           data: { userId: req.body.customerId },
         };
+
         if (channel) {
           PublishMessage(
             channel,
@@ -63,6 +68,7 @@ const api = async (app: Application) => {
             JSON.stringify(event)
           );
         }
+
         return res.status(201).json(newOrder);
       } catch (error) {
         ErrorHandler(error, res);
@@ -123,10 +129,16 @@ const api = async (app: Application) => {
             const customer = await makeRequestWithRetries(url, "GET");
             if (!customer)
               return res.status(400).json({ msg: "Customer was not found..." });
-
+            const result = await Promise.all(
+              order.orderItem.map(async (item) => {
+                const image = await takeUrl(item.product_image);
+                item.product_image = image;
+                return item;
+              })
+            );
             const event = {
               type: "new_order",
-              data: { ...order, customer },
+              data: { ...{ ...order, orderItem: result }, customer },
             };
 
             PublishMessage(
@@ -151,6 +163,7 @@ const api = async (app: Application) => {
         if (typeof req.query.page === "string") {
           page = parseInt(req.query.page);
         }
+        console.log("what going on?");
         const orderList = await service.GetOrdersListService(customerId, page);
         return res.status(200).json(orderList);
       }

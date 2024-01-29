@@ -16,7 +16,7 @@ const api = async (app: Application) => {
 
   const channel = await CreateChannel();
 
-  app.use(verifyJWT);
+  //app.use(verifyJWT);
 
   app.post(
     "/feedback",
@@ -24,7 +24,7 @@ const api = async (app: Application) => {
     async (req: Request, res: Response) => {
       try {
         const newFeedback = await feedService.CreateFeedService(req.body);
-
+        console.log(newFeedback);
         if (!newFeedback)
           return res
             .status(404)

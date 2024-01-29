@@ -21,7 +21,10 @@ import {
   BioValidationType,
   workingDaysValidationType,
 } from "../api/middleware/validation/additional.validation";
-import { ImageMessageType } from "../database/types/type.imageUrl";
+import {
+  ImageMessageType,
+  JustTestUpload,
+} from "../database/types/type.imageUrl";
 import { MessageOrderType } from "../database/types/type.order";
 import { CreateAddressSchemaType } from "../api/middleware/validation/address.validation";
 
@@ -331,6 +334,15 @@ class VendorService {
     }
   }
 
+  async updateFoodImageService(input: JustTestUpload) {
+    try {
+      return await this.repository.updateFoodImage(input);
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw new Error(error.message);
+    }
+  }
+
   async deleteFeedbacksService(feedId: number) {
     try {
       return await this.repository.deleteFeedsFromVendor(feedId);
@@ -419,6 +431,9 @@ class VendorService {
           break;
         case "upload_vendor_gallery":
           this.uploadVendorGallery(event.data as ImageMessageType);
+          break;
+        case "upload_vendor_product":
+          this.updateFoodImageService(event.data as JustTestUpload);
           break;
         case "update_customer_info":
           this.updateFeedbackWithCustomerInfoService(

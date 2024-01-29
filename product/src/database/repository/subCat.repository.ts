@@ -3,15 +3,14 @@ import { IncomingSubCatValidationType } from "../../api/middleware/validation/su
 import log from "../../utils/logger";
 import initialize from "../initialize";
 import { SubCatInputType } from "../types/types.subCategory";
-import { makeRequestWithRetries } from "../../utils/makeRequestWithRetries";
 
 class subCatRepo {
   async createSubCut(
-    input: IncomingSubCatValidationType["body"],
-    vendorId: string
+    input: IncomingSubCatValidationType["body"]
+    //vendorId: string
   ) {
     try {
-      return await initialize.SubCat.create({ ...input, vendorId });
+      return await initialize.SubCat.create(input);
     } catch (error: any) {
       log.error({ err: error.message });
     }

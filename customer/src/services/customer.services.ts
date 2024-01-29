@@ -208,6 +208,7 @@ class CustomerService {
           this.AddOrderAndMakeEmptyCart(event.data.userId as string);
           break;
         case "add_feedback":
+          console.log("im here");
           this.ManageReview(event.data as FeedbackMessageType);
           break;
         case "upload_profile_url":

@@ -82,9 +82,9 @@ export async function defineBestDeliveryman(
   const centralPlace = geolib.getCenter(
     vendorAddresses
   ) as GeolibInputCoordinates;
+
   try {
     const avaliableDeliverymen = (await getValidDeliverymen()) as [];
-
     const bestDeliverymenChoices = avaliableDeliverymen.sort((a, b) => {
       const distanceToA = geolib.getDistance(centralPlace, a);
       const distanceToB = geolib.getDistance(centralPlace, b);

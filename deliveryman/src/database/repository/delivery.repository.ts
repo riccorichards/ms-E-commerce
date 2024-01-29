@@ -169,7 +169,7 @@ class DeliveryRepo {
 
       const imgUrl = await takeUrl(image);
       if (isCoords) {
-        const url = `http://localhost:8007/coords/${currentAddress}`;
+        const url = `http://localhost:8007/coords?address=${currentAddress}`;
         const coords: { latitude: number; longitude: number } =
           await makeRequestWithRetries(url, "GET");
 
@@ -242,9 +242,15 @@ class DeliveryRepo {
         pageSize: limit,
         totalCount: totaldDeliveries,
       };
-
+      const result = await Promise.all(
+        deliveries.map(async (person) => {
+          const image = await takeUrl(person.image);
+          person.image = image;
+          return person;
+        })
+      );
       return {
-        employees: deliveries,
+        employees: result,
         pagination,
       };
     } catch (error) {

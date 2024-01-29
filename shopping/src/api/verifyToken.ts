@@ -8,7 +8,7 @@ interface GlobalUserType {
 }
 
 const publicKey = Buffer.from(
-  process.env["RSA_PUBLIC_KEY"] || "",
+  process.env["CUSTOMER_RSA_PUBLIC_KEY"] || "",
   "base64"
 ).toString("ascii");
 
@@ -22,7 +22,10 @@ declare global {
 
 export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const accessToken = get(req, "cookies.accessToken");
+    const accessToken =
+      get(req, "cookies.accessToken") ||
+      get(req, "cookies.delivery-accessToken");
+
     if (!accessToken) return res.status(401).json({ msg: "No token provided" });
 
     jwt.verify(accessToken, publicKey, (err: any, user: any) => {

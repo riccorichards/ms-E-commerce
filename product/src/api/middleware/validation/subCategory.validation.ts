@@ -8,6 +8,7 @@ export const IncomingSubCatValidation = object({
     desc: string({
       required_error: "Description is required!",
     }),
+    vendorId: string(),
     mainCatId: number(),
   }),
 });

@@ -32,7 +32,7 @@ import { AddSocialUrlType } from "../../api/middleware/validation/socialUrls.val
 import { URL } from "node:url";
 import FoodsModel from "../models/foods.model";
 import { FoodMessageType } from "../types/type.foods";
-import { ImageMessageType } from "../types/type.imageUrl";
+import { ImageMessageType, JustTestUpload } from "../types/type.imageUrl";
 import GalleryModel from "../models/gallery.model";
 import { MessageOrderType, OrderDocument } from "../types/type.order";
 import OrderModel from "../models/order.model";
@@ -53,6 +53,21 @@ interface WeeklyTopVendors {
   [key: string]: VendorTotal[];
 }
 
+function extrat(str: string) {
+  const uuidRegex =
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+
+  const titleAndUuid = str.split("/")[1];
+
+  const uuidMatch = titleAndUuid.match(uuidRegex);
+  if (uuidMatch) {
+    const title = titleAndUuid
+      .replace("-" + uuidMatch[0], "")
+      .replace(".webp", "");
+    return title.trim();
+  }
+  return null;
+}
 class VendorRepo {
   async CreateVendor(input: CreateVendorSchemaType) {
     try {
@@ -99,11 +114,6 @@ class VendorRepo {
 
       if (!newSession) throw new Error("Error while creating a new session");
 
-      const url = `http://localhost:8007/file?title=${vendor.image}`;
-      const image = await makeRequestWithRetries(url, "GET");
-      if (!image) throw new Error("Error while taken image");
-
-      vendor.image = image;
       return { vendor, newSession };
     } catch (error) {
       ErrorHandler(error);
@@ -282,6 +292,20 @@ class VendorRepo {
       vendor.gallery.push(addNewGallertPhoto._id);
 
       return await vendor.save();
+    } catch (error) {
+      ErrorHandler(error);
+    }
+  }
+
+  async updateFoodImage(input: JustTestUpload) {
+    try {
+      const { title } = input; //img title
+      const foodTitle = extrat(title);
+      const food = await FoodsModel.findOne({ title: foodTitle });
+
+      if (!food) throw new Error("Error ===>" + food);
+      food.image = title;
+      return await food.save();
     } catch (error) {
       ErrorHandler(error);
     }
@@ -659,8 +683,6 @@ class VendorRepo {
 
   async GetFoods(id: string) {
     try {
-      console.log(id);
-
       const foods = await FoodsModel.find({ forVendor: id });
       if (!foods) throw new Error("Data is not available");
       const result = await Promise.all(
@@ -1043,12 +1065,11 @@ class VendorRepo {
       const vendor = await VendorModel.findOne({
         address: vendorAddress,
       }).lean();
-
       if (!vendor) throw new Error("Error retrieve vendor");
 
       const imgUrl = await takeUrl(vendor.image);
 
-      const url = `http://localhost:8007/coords/${vendorAddress}`;
+      const url = `http://localhost:8007/coords?address=${vendorAddress}`;
       const coords: { latitude: number; longitude: number } =
         await makeRequestWithRetries(url, "GET");
 

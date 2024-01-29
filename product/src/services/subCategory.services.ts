@@ -11,11 +11,11 @@ class SubCatService {
   }
 
   async createSubCatService(
-    input: IncomingSubCatValidationType["body"],
-    vendorId: string
+    input: IncomingSubCatValidationType["body"]
+    //vendorId: string
   ) {
     try {
-      return await this.repository.createSubCut(input, vendorId);
+      return await this.repository.createSubCut(input);
     } catch (error: any) {
       log.error({
         err: error.message,
@@ -41,7 +41,6 @@ class SubCatService {
       });
     }
   }
-
 
   async getSubCatByIdService(id: number) {
     try {

@@ -25,7 +25,7 @@ const api = async (app: Application) => {
 
   app.post(
     "/upload",
-    verifyJWT,
+    //verifyJWT,
     uploadFile,
     async (req: Request, res: Response) => {
       try {
@@ -82,15 +82,16 @@ const api = async (app: Application) => {
                 targetType.targetAddress = "upload_vendor_gallery";
                 targetType.targetPath = config.vendor_binding_key;
                 break;
+              case "foods":
+                targetType.targetAddress = "upload_vendor_product";
+                targetType.targetPath = config.vendor_binding_key;
+                break;
             }
             break;
           case "deliveryman":
             targetType.targetAddress = "upload_deliveryman_profile";
             targetType.targetPath = config.deliveryman_binding_key;
             break;
-          case "foods":
-            targetType.targetAddress = "upload_product_image";
-            targetType.targetPath = config.product_binding_key;
         }
 
         const event = {
@@ -218,9 +219,10 @@ const api = async (app: Application) => {
     }
   });
 
-  app.get("/coords/:address", async (req: Request, res: Response) => {
+  app.get("/coords", async (req: Request, res: Response) => {
     try {
-      const address = req.params.address;
+      const address =
+        typeof req.query.address === "string" ? req.query.address : "";
       if (address) {
         const result = await convertAddressToCoords(address);
 

@@ -65,6 +65,7 @@ class ShoppingRepo {
         longitude: number;
         personId: string;
       }[] = await sendAddressesToCloudManager(vendorAddresses);
+
       if (!topNearestPersons)
         throw new Error("Error while defining the top nearest persons");
 
@@ -185,7 +186,7 @@ class ShoppingRepo {
           createdAt: order.createdAt,
         };
       });
-
+      console.log("why pending?");
       const totalPages = Math.ceil(totalOrdersCount / take);
       const pagination = {
         page,
@@ -247,27 +248,49 @@ class ShoppingRepo {
 
   async GetTopCustomers() {
     try {
-      const orders = await this.orderRepository.find();
+      const orders = await this.orderRepository.find({
+        relations: ["orderItem"],
+      });
 
       if (!orders) throw new Error("Data is not available");
 
       const groupedByCustomers = _.groupBy(orders, "customerId");
 
-      const customerInfoPromises = Object.keys(groupedByCustomers).map(
-        async (customerId) => {
-          const url = `http://localhost:8001/order-customer-info/${customerId}`;
-          try {
-            return await makeRequestWithRetries(url, "GET");
-          } catch (error: any) {
-            log.error({ err: error.message });
-            return null; // Return null or handle error as needed
+      const result = [];
+
+      for (const [customerId, orders] of Object.entries(groupedByCustomers)) {
+        const len = orders.length;
+        let total_amount = 0;
+
+        orders.forEach((order) => {
+          const orderTotal = order.orderItem.reduce(
+            (acc, item) => acc + parseFloat(item.product_price || "0"),
+            0
+          );
+          total_amount += orderTotal;
+        });
+        const customerInfoPromises = Object.keys(groupedByCustomers).map(
+          async (customerId) => {
+            const url = `http://localhost:8001/order-customer-info/${customerId}`;
+            try {
+              return await makeRequestWithRetries(url, "GET");
+            } catch (error: any) {
+              log.error({ err: error.message });
+              return null;
+            }
           }
-        }
-      );
+        );
 
-      const customers = await Promise.all(customerInfoPromises);
+        const customers = await Promise.all(
+          customerInfoPromises.filter(
+            (customer) => customer !== null || undefined
+          )
+        );
 
-      return customers.filter((customer) => customer !== null || undefined);
+        result.push({ ...customers, len, total_amount });
+      }
+
+      return result;
     } catch (error: any) {
       log.error({ err: error.message });
       throw error;

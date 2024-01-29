@@ -232,6 +232,7 @@ class CustomerRepo {
       throw error;
     }
   }
+
   async UpdateFeedWithDeliverymanPhoto(
     input: UpdateFeedbackWithDaliverymanPhotoMessage
   ) {
@@ -365,8 +366,19 @@ class CustomerRepo {
         wishlist.push(input);
       }
 
-      profile.wishlist = wishlist;
+      const result = await Promise.all(
+        wishlist.map(async (item) => {
+          const image = await takeUrl(item.image);
+          item.image = image;
+
+          return item;
+        })
+      );
+
+      profile.wishlist = result;
+
       const savedProfile = await profile.save();
+
       return savedProfile.wishlist;
     } catch (error: any) {
       log.error({ err: error.message });
@@ -396,7 +408,16 @@ class CustomerRepo {
         cart.push(input);
       }
 
-      profile.cart = cart;
+      const result = await Promise.all(
+        cart.map(async (item) => {
+          const image = await takeUrl(item.image);
+          item.url = image;
+
+          return item;
+        })
+      );
+
+      profile.cart = result;
 
       const savedProfile = await profile.save();
       return savedProfile.cart;
@@ -426,7 +447,6 @@ class CustomerRepo {
   async ManageReviewToProfile(input: FeedbackMessageType) {
     try {
       const profile = await UserModel.findById(input.userId);
-
       if (!profile) throw new Error("Error with find User");
 
       if (!Boolean(await FeedbackModel.findOne({ feedId: input.feedId }))) {

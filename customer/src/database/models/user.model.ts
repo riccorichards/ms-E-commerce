@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema(
     bonus: { type: Number, default: 0 },
     isAdmin: { type: Boolean, default: false },
     bank: { type: mongoose.Schema.Types.ObjectId, ref: "Bank" },
+    feedback: [{ type: mongoose.Schema.Types.ObjectId, ref: "Feedback" }],
     address: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Address",
@@ -33,6 +34,7 @@ const UserSchema = new mongoose.Schema(
         id: { type: Number, required: true },
         title: { type: String },
         image: { type: String },
+        url: { type: String, required: false },
         address: { type: String },
         price: { type: String },
         unit: { type: Number, required: true },

@@ -121,6 +121,7 @@ const api = (app: Application, channel: Channel) => {
     validateIncomingData(CreateBankAccSchema),
     async (req: Request, res: Response) => {
       try {
+        console.log(req.body);
         const result = await service.UserBankAcc(req.body);
         if (!result)
           return res
@@ -169,27 +170,6 @@ const api = (app: Application, channel: Channel) => {
   });
 
   app.use([deserializeUser, requestUser]);
-
-  app.post("/generate-new-token", async (req: Request, res: Response) => {
-    try {
-      const refreshToken =
-        get(req, "cookies.refreshToken") ||
-        (get(req, "headers.x-refresh") as string);
-
-      const newAccessToken = generateNewAccessToken(refreshToken);
-
-      if (!newAccessToken)
-        return res
-          .status(400)
-          .json("Something went wrong while creating a new token");
-
-      return res
-        .status(200)
-        .json({ msg: "New access token was successfully created" });
-    } catch (error) {
-      return res.status(500).json(error);
-    }
-  });
 
   app.put("/update-user", async (req: Request, res: Response) => {
     try {

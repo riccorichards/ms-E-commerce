@@ -15,6 +15,7 @@ import config from "../../config";
 import { Channel } from "amqplib";
 import { validateIncomingData } from "./middleware/validateIncomingData";
 import { ApiErrorHandler } from "./ApiErrorHandler";
+import { takeUrl } from "../utils/makeRequestWithRetries";
 
 const api = async (app: Application, channel: Channel) => {
   const Mservice = new MainCatService();
@@ -94,15 +95,15 @@ const api = async (app: Application, channel: Channel) => {
   //sub category
   app.post(
     "/sub-cat",
-    verifyJWT,
+    //verifyJWT,
     validateIncomingData(IncomingSubCatValidation),
     async (req: Request, res: Response) => {
       try {
         const vendorId = req.user?.vendor;
-        if (!vendorId) return res.status(404).json({ msg: "Vendor Not Found" });
+        //if (!vendorId) return res.status(404).json({ msg: "Vendor Not Found" });
         const newSubCat = await Sservice.createSubCatService(
-          req.body,
-          vendorId
+          req.body
+          //vendorId
         );
         if (!newSubCat)
           return res
@@ -189,12 +190,13 @@ const api = async (app: Application, channel: Channel) => {
 
   //product
   app.post(
-    "/product",
-    verifyJWT,
+    "/product/:vendorId",
+    //verifyJWT,
     validateIncomingData(IncomingProductValidation),
     async (req: Request, res: Response) => {
       try {
-        const vendorId = req.user?.vendor;
+        //const vendorId = req.user?.vendor;
+        const vendorId = req.params.vendorId;
         const newProduct = await Pservice.createProductService(req.body);
 
         if (!newProduct)
@@ -214,7 +216,6 @@ const api = async (app: Application, channel: Channel) => {
         };
 
         if (channel) {
-          console.log(event);
           PublishMessage(
             channel,
             config.vendor_binding_key,
@@ -374,6 +375,8 @@ const api = async (app: Application, channel: Channel) => {
       if (!product) return res.status(404).json({ msg: "Not found product" });
 
       const { id, image, title, price, desc } = product;
+      const imgUrl = await takeUrl(image);
+
       const event = {
         type: "add_product_to_wishlist",
         data: {
@@ -392,7 +395,9 @@ const api = async (app: Application, channel: Channel) => {
           config.customer_binding_key,
           JSON.stringify(event)
         );
-        return res.status(201).json({ id, userId, title, desc, image, price });
+        return res
+          .status(201)
+          .json({ id, userId, title, desc, image: imgUrl, price });
       } else {
         return res.status(503).json({ msg: "Service Unavailable" });
       }
@@ -431,13 +436,18 @@ const api = async (app: Application, channel: Channel) => {
         },
       };
 
+      const imgUrl = await takeUrl(image);
+
       if (channel) {
         PublishMessage(
           channel,
           config.customer_binding_key,
           JSON.stringify(event)
         );
-        return res.status(201).json({ id, title, image, price, address, unit });
+
+        return res
+          .status(201)
+          .json({ id, title, image: image, url: imgUrl, price, address, unit });
       } else {
         return res.status(503).json({ msg: "Service Unavailable" });
       }

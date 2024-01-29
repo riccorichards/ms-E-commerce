@@ -199,21 +199,20 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
-  app.get(
-    "/find-vendor-for-order/:address",
-    async (req: Request, res: Response) => {
-      try {
-        const address = req.params.address;
-        const vendor = await service.FindVendorForOrder(address);
-        if (!vendor)
-          return res.status(404).json({ err: "Error with fetching vendor" });
+  app.get("/find-vendor-for-order", async (req: Request, res: Response) => {
+    try {
+      const address =
+        typeof req.query.address === "string" ? req.query.address : "";
 
-        return res.status(201).json(vendor);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
+      const vendor = await service.FindVendorForOrder(address);
+      if (!vendor)
+        return res.status(404).json({ err: "Error with fetching vendor" });
+
+      return res.status(201).json(vendor);
+    } catch (error) {
+      ApiErrorHandler(error, res);
     }
-  );
+  });
 
   app.get("/top-vendors", async (req: Request, res: Response) => {
     try {

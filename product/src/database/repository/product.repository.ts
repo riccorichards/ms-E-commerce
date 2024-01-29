@@ -4,10 +4,7 @@ import {
   IncomingProductUpdateValidationType,
 } from "../../api/middleware/validation/product.validation";
 import log from "../../utils/logger";
-import {
-  makeRequestWithRetries,
-  takeUrl,
-} from "../../utils/makeRequestWithRetries";
+import { takeUrl } from "../../utils/makeRequestWithRetries";
 import initialize from "../initialize";
 
 class ProductRepo {
