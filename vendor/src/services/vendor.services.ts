@@ -11,20 +11,14 @@ import {
   UpdateVendorSchemaType,
 } from "../api/middleware/validation/vendor.validation";
 import { CreateSessionSchemaType } from "../api/middleware/validation/session.validation";
-import {
-  CreateTeamMemberSchemaType,
-  UpdateTeamMemberSchemaType,
-} from "../api/middleware/validation/team.validation";
+import { CreateTeamMemberSchemaType } from "../api/middleware/validation/team.validation";
 import { AddSocialUrlType } from "../api/middleware/validation/socialUrls.validation";
 import { FoodMessageType } from "../database/types/type.foods";
 import {
   BioValidationType,
   workingDaysValidationType,
 } from "../api/middleware/validation/additional.validation";
-import {
-  ImageMessageType,
-  JustTestUpload,
-} from "../database/types/type.imageUrl";
+import { ImageMessageType } from "../database/types/type.imageUrl";
 import { MessageOrderType } from "../database/types/type.order";
 import { CreateAddressSchemaType } from "../api/middleware/validation/address.validation";
 
@@ -87,17 +81,6 @@ class VendorService {
     }
   }
 
-  async UpdateUpdateTeamMember(
-    id: string,
-    input: UpdateTeamMemberSchemaType["body"]
-  ) {
-    try {
-      return await this.repository.UpdateTeamMember(id, input);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-
   async AddVendorAddressService(
     id: string,
     input: CreateAddressSchemaType["body"]
@@ -112,17 +95,6 @@ class VendorService {
   async AddAdditionalInfoService(id: string, input: BioValidationType["body"]) {
     try {
       return await this.repository.AddBioToVendor(id, input);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-
-  async UpdateAdditionalInfoService(
-    id: string,
-    input: BioValidationType["body"]
-  ) {
-    try {
-      return await this.repository.UpdateBioInVendor(id, input);
     } catch (error: any) {
       log.error({ err: error.message });
     }
@@ -284,15 +256,6 @@ class VendorService {
     }
   }
 
-  async updateFeedbacksService(input: FeedbackMessageType) {
-    try {
-      return await this.repository.updateFeeds(input);
-    } catch (error: any) {
-      log.error({ err: error.message });
-      throw new Error(error.message);
-    }
-  }
-
   async addWorkingHrsService(
     vendorId: string,
     input: workingDaysValidationType["body"]
@@ -328,15 +291,6 @@ class VendorService {
   ) {
     try {
       return await this.repository.updateFeedbackWithCustomerInfo(input);
-    } catch (error: any) {
-      log.error({ err: error.message });
-      throw new Error(error.message);
-    }
-  }
-
-  async updateFoodImageService(input: JustTestUpload) {
-    try {
-      return await this.repository.updateFoodImage(input);
     } catch (error: any) {
       log.error({ err: error.message });
       throw new Error(error.message);
@@ -382,15 +336,6 @@ class VendorService {
     }
   }
 
-  async updatefoodService(input: FoodMessageType) {
-    try {
-      return await this.repository.updateFood(input);
-    } catch (error: any) {
-      log.error({ err: error.message });
-      throw new Error(error.message);
-    }
-  }
-
   async deletefoodService(foodId: number) {
     try {
       return await this.repository.deleteFoodFromVendor(foodId);
@@ -400,6 +345,7 @@ class VendorService {
     }
   }
 
+  // vendor server listenings events
   async SubscribeEvent(event: EventType, channel: Channel, msg: Message) {
     log.info(
       "========================== Triggering an event ======================"
@@ -409,9 +355,6 @@ class VendorService {
       switch (event.type) {
         case "add_feed_in_vendor":
           this.createFeedbacksService(event.data as FeedbackMessageType);
-          break;
-        case "update_feed_in_vendor":
-          this.updateFeedbacksService(event.data as FeedbackMessageType);
           break;
         case "remove_feed_from_vendor":
           const feed = event.data as FeedbackMessageType;
@@ -423,17 +366,11 @@ class VendorService {
         case "new_order_for_vendor":
           this.addNewOrderForVendorService(event.data as MessageOrderType);
           break;
-        case "update_food_in_vendor":
-          this.updatefoodService(event.data as FoodMessageType);
-          break;
         case "upload_vendor_profile":
           this.uploadVendorImage(event.data as ImageMessageType);
           break;
         case "upload_vendor_gallery":
           this.uploadVendorGallery(event.data as ImageMessageType);
-          break;
-        case "upload_vendor_product":
-          this.updateFoodImageService(event.data as JustTestUpload);
           break;
         case "update_customer_info":
           this.updateFeedbackWithCustomerInfoService(

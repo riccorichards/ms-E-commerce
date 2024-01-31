@@ -18,7 +18,7 @@ import {
   UpdateTeamMemberSchema,
 } from "./middleware/validation/team.validation";
 import { Channel } from "amqplib";
-import { SubscribeMessage } from "../utils/rabbitMQ.utils";
+import { PublishMessage, SubscribeMessage } from "../utils/rabbitMQ.utils";
 import { validateIncomingData } from "./middleware/validateResources";
 import ApiErrorHandler from "./apiErrorHandler";
 import { CreateSessionSchema } from "./middleware/validation/session.validation";
@@ -102,7 +102,7 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
-  //get vendor's data
+  //get vendor's feedback based on provided query
   app.get("/vendor-feeds/:vendorId", async (req: Request, res: Response) => {
     try {
       const vendorId = req.params.vendorId;
@@ -124,28 +124,6 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.get(
-    "/additional-info/:vendorId?",
-    async (req: Request<{ vendorId: string }>, res: Response) => {
-      try {
-        const vendorId = res.locals.vendor.vendor || req.params.vendorId;
-
-        if (!vendorId) {
-          return res.status(400).json({ msg: "Vendor ID is required." });
-        }
-        const vendor = await service.GetAdditionalInfoService(vendorId);
-        if (!vendor)
-          return res.status(400).json({
-            msg: "Vendor's additional info not found.",
-          });
-
-        return res.status(200).json(vendor);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
-    }
-  );
-
   //retrieving all vendors
   app.get("/vendor", async (req: Request, res: Response) => {
     try {
@@ -160,6 +138,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //for customers
   app.get("/find-vendor/:vendorId", async (req: Request, res: Response) => {
     try {
       const vendorId = req.params.vendorId;
@@ -173,6 +152,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //the function retrieves feedbacks based on provided page for customers
   app.get(
     "/vendor-feedbacks/:vendorId",
     async (req: Request, res: Response) => {
@@ -199,6 +179,7 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
+  //the function returns vendor's information for order based on address (query)
   app.get("/find-vendor-for-order", async (req: Request, res: Response) => {
     try {
       const address =
@@ -214,6 +195,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //the function defined top vendors based on its orders
   app.get("/top-vendors", async (req: Request, res: Response) => {
     try {
       const topVendors = await service.GetTopVendorsService();
@@ -226,7 +208,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  //retrieve vendor's gallery
+  //retrieve vendor's gallery for customer
   app.get("/vendor-gallery/:vendorId", async (req: Request, res: Response) => {
     try {
       const vendorId = req.params.vendorId;
@@ -242,7 +224,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  //retrieve vendor's food
+  //retrieve vendor's food for customer
   app.get("/vendor-products/:vendorId", async (req: Request, res: Response) => {
     try {
       const vendorId = req.params.vendorId;
@@ -278,6 +260,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  // the function handles couple of complex features for calculate some data information
   app.get("/vendor-dashboard", async (req: Request, res: Response) => {
     try {
       const vendorId = res.locals.vendor.vendor;
@@ -317,6 +300,19 @@ const api = (app: Application, channel: Channel) => {
         );
         if (!updatedUser)
           return res.status(404).json({ err: "Error with updating process" });
+
+        const event = {
+          type: "update_feedback_info",
+          data: { vendorId, image: null, name: updatedUser.name },
+        };
+        if (channel) {
+          PublishMessage(
+            channel,
+            config.customer_binding_key,
+            JSON.stringify(event)
+          );
+        }
+
         return res.status(201).json(updatedUser);
       } catch (error: any) {
         ApiErrorHandler(error, res);
@@ -345,6 +341,7 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
+  //remove team member from vendor
   app.delete("/vendor-team/:memberId", async (req: Request, res: Response) => {
     try {
       const vendorId = res.locals.vendor.vendor;
@@ -363,28 +360,6 @@ const api = (app: Application, channel: Channel) => {
       ApiErrorHandler(error, res);
     }
   });
-
-  // update team member
-  app.put(
-    "/update-vendor-team",
-    validateIncomingData(UpdateTeamMemberSchema),
-    async (req: Request, res: Response) => {
-      try {
-        const vendorId = res.locals.vendor.vendor;
-        const updatedVendorTeam = await service.UpdateUpdateTeamMember(
-          vendorId,
-          req.body
-        );
-        if (!updatedVendorTeam)
-          return res
-            .status(404)
-            .json({ err: "Error with updating the vendor's " });
-        return res.status(201).json(updatedVendorTeam);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
-    }
-  );
 
   // add address
   app.post(
@@ -432,27 +407,7 @@ const api = (app: Application, channel: Channel) => {
       }
     }
   );
-
-  app.put(
-    "/update-bio",
-    validateIncomingData(BioValidation),
-    async (req: Request, res: Response) => {
-      try {
-        const vendorId = res.locals.vendor.vendor;
-        const addAdditionalInfo = await service.UpdateAdditionalInfoService(
-          vendorId,
-          req.body
-        );
-        if (!addAdditionalInfo)
-          return res.status(404).json("Could not updated additional info");
-
-        return res.status(201).json(addAdditionalInfo);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
-    }
-  );
-
+  // define working hours
   app.post(
     "/working-hrs",
     validateIncomingData(workingDaysValidation),
@@ -475,6 +430,7 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
+  //update vendor's profile image
   app.put("/vendor-profile", async (req: Request, res: Response) => {
     try {
       const vendorId = res.locals.vendor.vendor;
@@ -488,6 +444,19 @@ const api = (app: Application, channel: Channel) => {
           .status(404)
           .json({ err: "Error while updating vendor's profile image" });
 
+      //we are creating the event to send update information to the customer server
+      const event = {
+        type: "update_feedback_info",
+        data: { vendorId, image: photoTitle, name: null },
+      };
+
+      if (channel) {
+        PublishMessage(
+          channel,
+          config.customer_binding_key,
+          JSON.stringify(event)
+        );
+      }
       return res.status(200).json(vendorImage);
     } catch (error: any) {
       ApiErrorHandler(error, res);
@@ -510,6 +479,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //the function has two capabilities, so it take as a query keyword which help detect which capability it should perform
   app.get("/vendor-orders", async (req: Request, res: Response) => {
     try {
       const withCustomerInfo = req.query.withCustomerInfo === "true";
@@ -528,6 +498,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  // define vendor's top customers based on vendor's orders
   app.get("/vendor-top-customers", async (req: Request, res: Response) => {
     try {
       const vendorId = res.locals.vendor.vendor;
@@ -544,6 +515,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //returns order's items based on provided order's id
   app.get(
     "/vendor-order-items/:orderId",
     async (req: Request, res: Response) => {
@@ -567,6 +539,7 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
+  //add social urls
   app.post(
     "/social-url",
     validateIncomingData(SocialMediaSchema),
@@ -583,7 +556,7 @@ const api = (app: Application, channel: Channel) => {
       }
     }
   );
-
+  //remove social urls
   app.delete("/social-url/:title", async (req: Request, res: Response) => {
     try {
       const vendorId = res.locals.vendor.vendor;
@@ -597,7 +570,7 @@ const api = (app: Application, channel: Channel) => {
       ApiErrorHandler(error, res);
     }
   });
-
+  // refresh access token
   app.post("/refresh-token", async (req: Request, res: Response) => {
     try {
       const refresh = req.cookies["vendor-refreshToken"];
@@ -621,7 +594,7 @@ const api = (app: Application, channel: Channel) => {
       ApiErrorHandler(error, res);
     }
   });
-
+  // logs out
   app.delete("/log_out", async (req: Request, res: Response) => {
     try {
       res.clearCookie("vendor-refreshToken");

@@ -5,10 +5,7 @@ import initialize from "../initialize";
 import { SubCatInputType } from "../types/types.subCategory";
 
 class subCatRepo {
-  async createSubCut(
-    input: IncomingSubCatValidationType["body"]
-    //vendorId: string
-  ) {
+  async createSubCut(input: IncomingSubCatValidationType["body"]) {
     try {
       return await initialize.SubCat.create(input);
     } catch (error: any) {
@@ -44,8 +41,10 @@ class subCatRepo {
     }
   }
 
+  //returns main cat's sub categories
   async getMainCatSubCats(id: number) {
     try {
+      //the selected sub cats need it own associated food
       return await initialize.SubCat.findAll({
         where: { mainCatId: id },
         include: [{ model: initialize.Product, as: "Products" }],
@@ -55,6 +54,7 @@ class subCatRepo {
     }
   }
 
+  //not used yet.
   async searchFoodInSubCat(title: string, id: number) {
     try {
       const result = await initialize.SubCat.findByPk(id, {
@@ -69,26 +69,6 @@ class subCatRepo {
 
       if (!result) return "Not found any matches";
       return result;
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-
-  async updateSubCat(id: number, input: SubCatInputType) {
-    try {
-      const [updatedFeeds] = await initialize.SubCat.update(input, {
-        where: { id },
-      });
-      if (updatedFeeds === 0) return log.error({ err: "No changes in rows" });
-      return await initialize.SubCat.findByPk(id);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-
-  async deleteSubCat(id: number) {
-    try {
-      return await initialize.SubCat.destroy({ where: { id } });
     } catch (error: any) {
       log.error({ err: error.message });
     }

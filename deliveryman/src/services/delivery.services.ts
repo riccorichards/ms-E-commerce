@@ -40,10 +40,6 @@ class DeliveryService {
     return this.repository.createFeedback(input);
   }
 
-  async UpdateFeedbackService(input: UpdateCustomerInfoInFeedMessageType) {
-    return this.repository.updateFeedback(input);
-  }
-
   async EditImageSerivce(input: EditImageMessage) {
     return this.repository.editImage(input);
   }
@@ -66,8 +62,8 @@ class DeliveryService {
     return this.repository.removeFeedback(id);
   }
 
-  async GetDeliverymanByIdService(name: string, isCoords: boolean) {
-    return this.repository.GetDeliverymanById(name, isCoords);
+  async GetDeliverymanByNameService(name: string, isCoords: boolean) {
+    return this.repository.GetDeliverymanByName(name, isCoords);
   }
 
   async GetAlDeliverymanService(page: number) {
@@ -98,11 +94,6 @@ class DeliveryService {
           break;
         case "upload_deliveryman_profile":
           this.EditImageSerivce(event.data as EditImageMessage);
-          break;
-        case "update_customer_info":
-          this.UpdateFeedbackService(
-            event.data as UpdateCustomerInfoInFeedMessageType
-          );
           break;
         default:
           log.info(`Unhandled event type: ${event.type}`);

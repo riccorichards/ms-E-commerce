@@ -32,7 +32,7 @@ class DeliveryRepo {
         image,
         isValid: true,
         currentAddress,
-        url: null,
+        url: null, // url needs for signed url
       });
 
       if (!newDeliveryMan)
@@ -98,6 +98,8 @@ class DeliveryRepo {
         raw: true,
       });
       if (!result) throw new Error("Deliveryman Not Found");
+
+      // here we need to return persons' current addresses and their IDs.then the cloudManage server will convert it into coords (lat and long)
       return result.map((res) => ({
         address: res.currentAddress,
         personId: res.id,
@@ -106,7 +108,7 @@ class DeliveryRepo {
       RepoErrorHandler(error);
     }
   }
-
+  //the server receives new feedback's information and add it into it's databases for avoid and decrement of network traffic
   async createFeedback(input: FeedbackMessageType) {
     try {
       return await initialize.Feedbacks.create(input);
@@ -115,27 +117,7 @@ class DeliveryRepo {
     }
   }
 
-  async updateFeedback(input: UpdateCustomerInfoInFeedMessageType) {
-    try {
-      const updatedFeed = await initialize.Feedbacks.findAll({
-        where: { userId: input.userId },
-      });
-
-      if (!updatedFeed) throw new Error("Not found feed");
-
-      return await Promise.all(
-        updatedFeed.map(async (feed) => {
-          feed.authorImg = input.updatedImage;
-          feed.author = input.updatedUsername;
-
-          return feed.save();
-        })
-      );
-    } catch (error) {
-      RepoErrorHandler(error);
-    }
-  }
-
+  //updating image
   async editImage(input: EditImageMessage) {
     try {
       const deliveryman = await initialize.Delivery.findByPk(input.userId);
@@ -150,6 +132,7 @@ class DeliveryRepo {
     }
   }
 
+  //will also receive id of feedbacks from feedback server to remove it inside deliveryman server
   async removeFeedback(id: number) {
     try {
       return await initialize.Feedbacks.destroy({ where: { feedId: id } });
@@ -158,7 +141,8 @@ class DeliveryRepo {
     }
   }
 
-  async GetDeliverymanById(personName: string, isCoords: boolean) {
+  //this function takes person's name and returns its information + coords,
+  async GetDeliverymanByName(personName: string, isCoords: boolean) {
     try {
       const delivery = await initialize.Delivery.findOne({
         where: { name: personName },
@@ -167,8 +151,10 @@ class DeliveryRepo {
       const { id, name, image, createdAt, email, currentAddress } =
         delivery.dataValues;
 
+      // define the image's url from the GCP
       const imgUrl = await takeUrl(image);
       if (isCoords) {
+        //making request to convert address into coords
         const url = `http://localhost:8007/coords?address=${currentAddress}`;
         const coords: { latitude: number; longitude: number } =
           await makeRequestWithRetries(url, "GET");
@@ -209,6 +195,7 @@ class DeliveryRepo {
     }
   }
 
+  //this function needs to take pages from the clien, this information is used to define all employees for admin panel
   async GetAllDeliveryman(page: number) {
     try {
       const limit = 5;
@@ -258,6 +245,7 @@ class DeliveryRepo {
     }
   }
 
+  //this function has two capabilities, one if isStats is true return financial information for echart, and the second capability is to return order information of person (ID)
   async GetDeliveryActivities(
     id: number,
     isStats: boolean,
@@ -268,30 +256,34 @@ class DeliveryRepo {
 
       if (!deliverymen)
         throw new Error("Not found deliverymen or Data is not available");
-
+      // we need to make a request to the shopping server for receive delivery person's orders (total)
       const url = `http://localhost:8003/deliveryman-orders/${deliverymen.name}`;
       const deliverymanOrders: OrderType[] = await makeRequestWithRetries(
         url,
         "GET"
       );
-
+      // if there is any kind of error we need to hanfle it
       if (!deliverymanOrders)
         throw new Error("Error while delivery orders feting...");
-
+      //in this condition we are handling finantial information for E-chart
       if (isStats) {
         const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
+        // grouping orders based on weekly days
         const groupedOrdersByWeekDays = _.groupBy(
           deliverymanOrders,
           (order) => {
+            //we need to define the number of weekdays to interact then with (like this ==> weekdays[index])
             return weekDays[new Date(order.createdAt).getDay() - 1];
           }
         );
 
+        //we are defining weekly result's empty array
         const weeklyResult: { day: string; result: number }[] = [];
         weekDays.forEach((day) => {
+          // here we have gained orders for per weekly days
           const ordersPerDay = groupedOrdersByWeekDays[day];
 
+          // defining the length for calculate and see how many orders delivery person did
           const lenPerDay = ordersPerDay ? ordersPerDay.length : 0;
           weeklyResult.push({
             day: day,
@@ -299,6 +291,7 @@ class DeliveryRepo {
           });
         });
 
+        // and returning information with "isStats: true" because of the client needs to understand whan kind of data the server responsed
         return {
           res: weeklyResult,
           len: deliverymanOrders.length,
@@ -306,17 +299,20 @@ class DeliveryRepo {
         };
       }
 
+      //if isStats is false, that means we need to handle the only returning process based on receiving amount
       const targetAmount =
         typeof amount === "number"
           ? amount
           : typeof amount === "undefined"
-          ? 5
+          ? 5 // initial required amount is 5 (default)
           : deliverymanOrders.length;
 
+      // then sorting because we need to see the last order first
       const sortedOrders = deliverymanOrders
         .sort((a, b) => b.id - a.id)
         .slice(0, targetAmount);
 
+      // orderItem (oi) this function returns all order items (foods) with image (url ==> GCP)
       const oiWithImgUrl = sortedOrders.map(async (order) => {
         const orderItems = await Promise.all(
           order.orderItem.map(async (item) => {
@@ -329,7 +325,7 @@ class DeliveryRepo {
       });
 
       return {
-        res: await Promise.all(oiWithImgUrl),
+        res: await Promise.all(oiWithImgUrl), // response, we need to wait when all data will be ready to send to the client side
         len: deliverymanOrders.length,
         isStats: false,
       };
@@ -338,12 +334,16 @@ class DeliveryRepo {
     }
   }
 
+
+  //this function returns the feedbacks based on provided amount 
   async getDeliveryFeeds(id: number, amount: number | undefined | string) {
     try {
+      // first we need to gain all feedbacks of deliveryman 
       const feedbacks = await initialize.Feedbacks.findAll({
         where: { targetId: id },
       });
       if (!feedbacks) throw new Error("Data is not available or was not found");
+
       const targetAmount =
         typeof amount === "number"
           ? amount
@@ -352,6 +352,7 @@ class DeliveryRepo {
           : feedbacks.length;
       const result = feedbacks.slice(0, targetAmount);
 
+      // the same, we need to take url from GCP 
       return await Promise.all(
         result.map(async (feed) => {
           const authorImg = await takeUrl(feed.authorImg);

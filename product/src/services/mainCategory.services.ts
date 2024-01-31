@@ -29,36 +29,6 @@ class MainCatService {
       });
     }
   }
-
-  async getMainCatByIdService(id: number) {
-    try {
-      return await this.repository.getMainCatById(id);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
-
-  async updateMainCatService(id: number, input: MainCatInputType) {
-    try {
-      return await this.repository.updateMainCat(id, input);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
-
-  async deleteMainCatService(id: number) {
-    try {
-      return await this.repository.deleteMainCat(id);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
 }
 
 export default MainCatService;

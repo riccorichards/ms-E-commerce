@@ -6,10 +6,7 @@ import SubCatService from "../services/subCategory.services";
 import { verifyJWT } from "./middleware/verifyToken";
 import { IncomingMainCatValidation } from "./middleware/validation/mainCategory.validation";
 import { IncomingSubCatValidation } from "./middleware/validation/subCategory.validation";
-import {
-  IncomingProductUpdateValidation,
-  IncomingProductValidation,
-} from "./middleware/validation/product.validation";
+import { IncomingProductValidation } from "./middleware/validation/product.validation";
 import { PublishMessage, SubscriberMessage } from "../utils/rabbitMQ.utils";
 import config from "../../config";
 import { Channel } from "amqplib";
@@ -29,8 +26,8 @@ const api = async (app: Application, channel: Channel) => {
   //create main categories
   app.post(
     "/main-cat",
-    verifyJWT,
-    validateIncomingData(IncomingMainCatValidation),
+    verifyJWT, // for creating a main categories access token is required
+    validateIncomingData(IncomingMainCatValidation), //middleware
     async (req: Request, res: Response) => {
       try {
         const { title, desc, image } = req.body;
@@ -52,6 +49,7 @@ const api = async (app: Application, channel: Channel) => {
     }
   );
 
+  //returns all main cats
   app.get("/main-cat", async (req: Request, res: Response) => {
     try {
       const mainCats = await Mservice.getMainCatsService();
@@ -63,48 +61,17 @@ const api = async (app: Application, channel: Channel) => {
     }
   });
 
-  app.get("/main-cat/:_id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params._id);
-      const mainCat = await Mservice.getMainCatByIdService(id);
-      if (!mainCat)
-        return res
-          .status(404)
-          .json({ msg: "Error while fetching the main Cat" });
-      return res.status(200).json(mainCat);
-    } catch (error: any) {
-      ApiErrorHandler(res, error);
-    }
-  });
-
-  app.delete(
-    "/main-cat/:id",
-    verifyJWT,
-    async (req: Request, res: Response) => {
-      try {
-        const id = parseInt(req.params._id);
-        await Mservice.deleteMainCatService(id);
-
-        return res.status(201).json({ msg: "Successfully Deleted..." });
-      } catch (error) {
-        ApiErrorHandler(res, error);
-      }
-    }
-  );
-
   //sub category
   app.post(
     "/sub-cat",
-    //verifyJWT,
+    verifyJWT,
     validateIncomingData(IncomingSubCatValidation),
     async (req: Request, res: Response) => {
       try {
         const vendorId = req.user?.vendor;
-        //if (!vendorId) return res.status(404).json({ msg: "Vendor Not Found" });
-        const newSubCat = await Sservice.createSubCatService(
-          req.body
-          //vendorId
-        );
+        if (!vendorId)
+          return res.status(404).json({ msg: "You have not a permission" });
+        const newSubCat = await Sservice.createSubCatService(req.body);
         if (!newSubCat)
           return res
             .status(404)
@@ -116,6 +83,7 @@ const api = async (app: Application, channel: Channel) => {
     }
   );
 
+  //returns all sub cats
   app.get("/sub-cat", async (req: Request, res: Response) => {
     try {
       const allSubCategories = await Sservice.getSubCatsService();
@@ -129,6 +97,22 @@ const api = async (app: Application, channel: Channel) => {
     }
   });
 
+  //this function returns sub categories basedo on main category's ID
+  app.get("/main-subcat/:_id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params._id);
+      const subCategory = await Sservice.getMainCatSubCatsService(id);
+      if (!subCategory)
+        return res
+          .status(404)
+          .json({ msg: "Error while a fetching the sub cat" });
+      return res.status(200).json(subCategory);
+    } catch (error) {
+      ApiErrorHandler(res, error);
+    }
+  });
+
+  //returns all sub cats only for specific vendor
   app.get("/vendor-sub-cat", verifyJWT, async (req: Request, res: Response) => {
     try {
       const vendorId = req.user?.vendor;
@@ -146,57 +130,14 @@ const api = async (app: Application, channel: Channel) => {
     }
   });
 
-  app.get("/sub-cat/:_id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params._id);
-      const subCategory = await Sservice.getSubCatByIdService(id);
-      if (!subCategory)
-        return res
-          .status(404)
-          .json({ msg: "Error while a fetching the sub cat" });
-      return res.status(200).json(subCategory);
-    } catch (error) {
-      ApiErrorHandler(res, error);
-    }
-  });
-
-  app.get("/main-subcat/:_id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params._id);
-      const subCategory = await Sservice.getMainCatSubCatsService(id);
-      if (!subCategory)
-        return res
-          .status(404)
-          .json({ msg: "Error while a fetching the sub cat" });
-      return res.status(200).json(subCategory);
-    } catch (error) {
-      ApiErrorHandler(res, error);
-    }
-  });
-
-  app.delete(
-    "/sub-cat/:_id",
-    verifyJWT,
-    async (req: Request, res: Response) => {
-      try {
-        const id = parseInt(req.params._id);
-        await Sservice.deleteSubCatService(id);
-        return res.status(201).json({ msg: "Successfully removed..." });
-      } catch (error) {
-        ApiErrorHandler(res, error);
-      }
-    }
-  );
-
-  //product
+  //create a new product
   app.post(
-    "/product/:vendorId",
-    //verifyJWT,
+    "/product",
+    verifyJWT,
     validateIncomingData(IncomingProductValidation),
     async (req: Request, res: Response) => {
       try {
-        //const vendorId = req.user?.vendor;
-        const vendorId = req.params.vendorId;
+        const vendorId = req.user?.vendor; // purpose ==> to define which vendor should receives
         const newProduct = await Pservice.createProductService(req.body);
 
         if (!newProduct)
@@ -230,6 +171,7 @@ const api = async (app: Application, channel: Channel) => {
     }
   );
 
+  // this function has paginaton logic, it used for customers
   app.get("/product/:page", async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.params.page);
@@ -244,6 +186,7 @@ const api = async (app: Application, channel: Channel) => {
     }
   });
 
+  //this function returns all feedbacks based on provided ID
   app.get("/product-feeds/:productId", async (req: Request, res: Response) => {
     try {
       const productId = parseInt(req.params.productId);
@@ -258,6 +201,7 @@ const api = async (app: Application, channel: Channel) => {
     }
   });
 
+  //the function's capability is to gain all specific vendor's food and return it
   app.get(
     "/vendor-products/:vendorName",
     async (req: Request, res: Response) => {
@@ -275,7 +219,7 @@ const api = async (app: Application, channel: Channel) => {
       }
     }
   );
-
+  // food length for admin to calculate which food is more required
   app.get("/foods-length", async (req: Request, res: Response) => {
     try {
       const products = await Pservice.getFoodsLengthService();
@@ -288,50 +232,6 @@ const api = async (app: Application, channel: Channel) => {
       ApiErrorHandler(res, error);
     }
   });
-
-  app.put(
-    "/product/:_id",
-    verifyJWT,
-    validateIncomingData(IncomingProductUpdateValidation),
-    async (req: Request, res: Response) => {
-      try {
-        const vendorId = req.user?.vendor;
-        const foodId = parseInt(req.params._id);
-        const updatedProduct = await Pservice.updateProductService(
-          foodId,
-          req.body
-        );
-
-        if (!updatedProduct)
-          return res
-            .status(404)
-            .json({ msg: "Error while updating a product" });
-
-        const { id, ...other } = updatedProduct.dataValues;
-
-        const event = {
-          type: "update_food_in_vendor",
-          data: {
-            ...other,
-            foodId: id,
-            forVendor: vendorId,
-          },
-        };
-
-        if (channel) {
-          PublishMessage(
-            channel,
-            config.vendor_binding_key,
-            JSON.stringify(event)
-          );
-        }
-
-        return res.status(201).json(updatedProduct);
-      } catch (error) {
-        ApiErrorHandler(res, error);
-      }
-    }
-  );
 
   app.delete(
     "/product/:_id",
@@ -368,6 +268,7 @@ const api = async (app: Application, channel: Channel) => {
     }
   );
 
+  //this function handles to adding process of food to the customer's wishlist
   app.post("/add-product-to-wishlist", async (req: Request, res: Response) => {
     try {
       const { productId, userId } = req.body;
@@ -377,6 +278,7 @@ const api = async (app: Application, channel: Channel) => {
       const { id, image, title, price, desc } = product;
       const imgUrl = await takeUrl(image);
 
+      //so if adding food into wishlist capability is handled by product service, we need to send the food info to the customer server
       const event = {
         type: "add_product_to_wishlist",
         data: {
@@ -405,16 +307,6 @@ const api = async (app: Application, channel: Channel) => {
       ApiErrorHandler(res, error);
     }
   });
-
-  app.delete(
-    "/delete-product-to-wishlist",
-    async (req: Request, res: Response) => {
-      try {
-      } catch (error) {
-        ApiErrorHandler(res, error);
-      }
-    }
-  );
 
   app.post("/add-product-to-cart", async (req: Request, res: Response) => {
     try {

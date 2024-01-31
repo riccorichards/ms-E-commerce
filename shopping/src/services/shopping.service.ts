@@ -79,14 +79,6 @@ class ShoppingService {
     }
   }
 
-  async UpdateCustomerInfoService(msg: MessageType) {
-    try {
-      return await this.shoppingRepo.UpdateCustomerInfo(msg);
-    } catch (error: any) {
-      log.error({ err: error.message });
-    }
-  }
-
   async GetOrdersService() {
     try {
       return await this.shoppingRepo.GetOrders();
@@ -116,24 +108,6 @@ class ShoppingService {
       return await this.shoppingRepo.CancelOrder(orderId);
     } catch (error: any) {
       log.error(error.message);
-    }
-  }
-
-  async SubscribeEvent(event: EventType, channel: Channel, msg: Message) {
-    log.info(
-      "========================== Triggering an event ======================"
-    );
-
-    try {
-      if (event.type === "update_customer_info") {
-        this.UpdateCustomerInfoService(event.data);
-      } else {
-        log.info(`Unhandled event type: ${event.type}`);
-      }
-      channel.ack(msg);
-    } catch (error: any) {
-      log.info(`Error while Subscribe events: ${error.messge}`);
-      channel.nack(msg);
     }
   }
 }

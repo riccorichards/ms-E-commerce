@@ -20,15 +20,14 @@ import BankModel from "../models/bank.model";
 import { CreateUserSchemaType } from "../../api/middleware/validation/user.validation";
 import bcrypt from "bcrypt";
 import FeedbackModel from "../models/feedback.model";
-import {
-  makeRequestWithRetries,
-  takeUrl,
-} from "../../utils/makeRequestWithRetries";
+import { takeUrl } from "../../utils/makeRequestWithRetries";
 import {
   FeedbackMessageType,
   UpdateFeedbackWithDaliverymanPhotoMessage,
+  UpdateFeedbackWithVendorInfoMessage,
 } from "../types/type.feedback";
 
+//creating the class for contained the necessary methods for customers
 class CustomerRepo {
   async CreateCustomer(input: CreateUserSchemaType) {
     try {
@@ -52,6 +51,7 @@ class CustomerRepo {
 
   async CreateSession(input: SessionInputType, userAgent: string) {
     try {
+      //finding the user via email
       const user = await UserModel.findOne({ email: input.email })
         .populate("address")
         .populate("bank");
@@ -59,13 +59,13 @@ class CustomerRepo {
       if (!user) {
         throw new Error("Wrong credentials");
       }
-
+      //if user was found we are checking its password
       const validPass = await user.comparePass(input.password);
 
       if (!validPass) {
         throw new Error("Wrong credentials");
       }
-
+      //if everything looks good, then we are creating a new session
       const newSession = await SessionModel.create({
         user: user._id,
         userAgent,
@@ -82,6 +82,7 @@ class CustomerRepo {
 
   async AddAddress(input: AddressInputType) {
     try {
+      //extractin fields from the input
       const { userId, street, postalCode, city, country } = input;
 
       const user = (await UserModel.findById(userId)) as UserDocument;
@@ -95,8 +96,9 @@ class CustomerRepo {
 
       if (!newAddress) return false;
 
+      //saving the data in the collection
       const savedAddress = await newAddress.save();
-
+      //and pushing the _id to the user's address field
       user.address = omit(savedAddress.toJSON(), "userId")._id;
 
       return await user.save();
@@ -133,11 +135,13 @@ class CustomerRepo {
 
   async UpdateCustomerProfile(query: string, input: UpdateUserInput) {
     try {
+      // when updating process is ongoing, first the are checking if the input includes information about password
       if (input.newPassword) {
         const password = input?.newPassword;
-        const salt = await bcrypt.genSalt(13);
-        const hash = await bcrypt.hash(password, salt);
+        const salt = await bcrypt.genSalt(13); //generation salt
+        const hash = await bcrypt.hash(password, salt); // hashing the new passowrd
 
+        //and then update the customer's collection
         return await UserModel.findByIdAndUpdate(
           query,
           { ...input, password: hash },
@@ -151,11 +155,12 @@ class CustomerRepo {
         );
         if (!updatedCustomerInfo)
           throw new Error("Error while updating customer info");
+        //because of we are using the separate service for images, we need to take signed url from that server.
         const image = await takeUrl(updatedCustomerInfo.image);
         updatedCustomerInfo.url = image;
 
         const customerFeedbacks = await FeedbackModel.find({ userId: query });
-
+        //we are using promise.all because when happened updating process we need to handle it for all recods in the collection
         await Promise.all(
           customerFeedbacks.map(async (feed) => {
             feed.author = updatedCustomerInfo.username;
@@ -206,9 +211,7 @@ class CustomerRepo {
   async CheckCurrentPassword(query: string, password: string) {
     try {
       const profile = await UserModel.findById(query);
-      console.log({ password, note: "Repo" });
       const result = await profile?.comparePass(password);
-      console.log({ result, note: "Repo" });
       return result;
     } catch (error: any) {
       log.error({ err: error.message });
@@ -233,6 +236,7 @@ class CustomerRepo {
     }
   }
 
+  //when updating happened in the different server, in this case we are handling the delivery person's updating process
   async UpdateFeedWithDeliverymanPhoto(
     input: UpdateFeedbackWithDaliverymanPhotoMessage
   ) {
@@ -274,6 +278,7 @@ class CustomerRepo {
     }
   }
 
+  //return customer information by its id, this data is needs for the specific order
   async GetCustomerInfoById(customerId: string) {
     try {
       const profile = await UserModel.findById(customerId).populate("address");
@@ -281,9 +286,8 @@ class CustomerRepo {
       if (!profile) throw new Error("Profile was not found");
 
       const profileAddress = profile.address as PopulateAddress;
-
+      //take url function makes request to the cloudManager server to take signed url
       const image = await takeUrl(profile.image);
-      console.log(profile);
       const customerOrderInfo = {
         username: profile.username,
         address: profileAddress.street,
@@ -310,11 +314,33 @@ class CustomerRepo {
     }
   }
 
+  async UpdateFeedbackWithVendorInfo(
+    input: UpdateFeedbackWithVendorInfoMessage
+  ) {
+    try {
+      const feedbacks = await FeedbackModel.find({
+        forVendorId: input.vendorId,
+      });
+
+      if (!feedbacks) throw new Error("Data was not found or it is available");
+
+      return feedbacks.map(async (feed) => {
+        feed.targetImg = input.image ? input.image : feed.targetImg;
+        feed.targetTitle = input.name ? input.name : feed.targetTitle;
+        return await feed.save();
+      });
+    } catch (error: any) {
+      log.error({ err: error.message });
+      throw error;
+    }
+  }
+
   async CustomerFeeds(id: string, page: number | string) {
     try {
       if (typeof page === "number") {
-        const limit = 7;
-        const skip = (page - 1) * limit;
+        const limit = 7; //define limit (how many items we should to send)
+        const skip = (page - 1) * limit; //define the skip process, the idea is that we need to skip several items, for specific page, for example if the page is 3 we need to skip the first 21 items and send from item(22)
+
         const totalFeeds = (await FeedbackModel.find({ userId: id })).length;
         const customerFeeds = await FeedbackModel.find({ userId: id })
           .sort({ feedId: -1 })
@@ -324,6 +350,7 @@ class CustomerRepo {
         if (!customerFeeds) {
           throw new Error("Not found feeds or data is not available");
         }
+        // we need to use promise to take all signed urls for this response
         const feedResult = await Promise.all(
           customerFeeds.map(async (feed) => {
             const authorImage = await takeUrl(feed.authorImg);
@@ -334,6 +361,7 @@ class CustomerRepo {
             return feed;
           })
         );
+        //calculate the amoutn of pages
         const totalPages = Math.ceil(totalFeeds / limit);
         const pagination = {
           page,
@@ -355,11 +383,12 @@ class CustomerRepo {
       const profile = await UserModel.findById(userId).populate("wishlist");
 
       if (!profile) throw new Error("Error with find user");
-
+      // define the wishlist based on WishlistMessageType
       const wishlist = profile.wishlist as WishlistMessageType[];
-
+      //checking the item is already exists or not
       const isExist = wishlist.some((item) => item.id === input.id);
       if (isExist) {
+        //if true, we need to remove it
         const index = wishlist.findIndex((item) => item.id === input.id);
         wishlist.splice(index, 1);
       } else {
@@ -397,10 +426,13 @@ class CustomerRepo {
         (item) => item.id.toString() === input.id.toString()
       );
 
+      //if index is eques -1 that means item is the cart it not exist, so we can just add it in the cart
       if (index !== -1) {
+        //if item is already there, we need to define is it great than 0 or not, it not we need to update the unit of that specific item
         if (input.unit > 0) {
           cart[index].unit = input.unit;
         } else {
+          //if the item's unit is equal 0 we need to remove it from the cart
           const index = cart.findIndex((item) => item.id === input.id);
           cart.splice(index, 1);
         }
@@ -427,6 +459,7 @@ class CustomerRepo {
     }
   }
 
+  //this function is called when the customer decide to convert its cart into order
   async AddOrderAndMakeCartEmpty(userId: string) {
     try {
       const profile = await UserModel.findById(userId);
@@ -444,11 +477,13 @@ class CustomerRepo {
     }
   }
 
+  // this function handles the process of feedback in the customer servers, (note => feedback has separate server)
   async ManageReviewToProfile(input: FeedbackMessageType) {
     try {
       const profile = await UserModel.findById(input.userId);
       if (!profile) throw new Error("Error with find User");
 
+      //if this condition is true, that means the feedback is not existing and we can add it to customer's db
       if (!Boolean(await FeedbackModel.findOne({ feedId: input.feedId }))) {
         const newFeedback = await FeedbackModel.create(input);
 
@@ -461,6 +496,7 @@ class CustomerRepo {
 
         return profile;
       } else {
+        //if it is existing we need to remove it
         const existingFeed = await FeedbackModel.findOne({
           feedId: input.feedId,
         });

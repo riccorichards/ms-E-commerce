@@ -8,6 +8,7 @@ import { takeUrl } from "../../utils/makeRequestWithRetries";
 import initialize from "../initialize";
 
 class ProductRepo {
+  //create a new product
   async createProduct(input: IncomingProductType["body"]) {
     try {
       return await initialize.Product.create({ ...input, url: null });
@@ -18,9 +19,10 @@ class ProductRepo {
     }
   }
 
+  // returns all products, but for performance we splite the result with pages
   async getProducts(page: number) {
     try {
-      const limit = 5;
+      const limit = 6;
       const offset = (page - 1) * limit;
 
       const totalProductsCount = await initialize.Product.count();
@@ -53,14 +55,17 @@ class ProductRepo {
     }
   }
 
+  //the function returns specific food's feedbacks
   async getProductsFeeds(productId: number) {
     try {
+      //we grab here all feedbacks of food
       let feeds = await initialize.Feedbacks.findAll({
         where: { targetId: productId },
       });
 
       if (!feeds) throw new Error("Food data is not available or Not found");
 
+      // sorted it based on id ==> we need to see the last feed on the top
       feeds = feeds.sort((a, b) => b.id - a.id);
 
       const result = feeds.map(async (feed) => {
@@ -70,6 +75,7 @@ class ProductRepo {
 
         return feed;
       });
+      // we need to wait for all updates ==> feed.authorImg = image;
       const feedResult = await Promise.all(result);
 
       return feedResult.map((feed) => {
@@ -86,6 +92,7 @@ class ProductRepo {
     }
   }
 
+  //the function defines all food's for vendor
   async getVendorsProducts(vendorName: string) {
     try {
       let foods = await initialize.Product.findAll({
@@ -105,7 +112,7 @@ class ProductRepo {
       });
     }
   }
-
+  //returns the length
   async getFoodsLength() {
     try {
       return (await initialize.Product.findAll()).length;
@@ -118,23 +125,6 @@ class ProductRepo {
 
   async getProductById(id: number) {
     try {
-      return await initialize.Product.findByPk(id);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
-
-  async updateProduct(
-    id: number,
-    input: IncomingProductUpdateValidationType["body"]
-  ) {
-    try {
-      const [updatedProduct] = await initialize.Product.update(input, {
-        where: { id },
-      });
-      if (updatedProduct === 0) return log.error({ err: "No changes in rows" });
       return await initialize.Product.findByPk(id);
     } catch (error: any) {
       log.error({

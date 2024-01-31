@@ -3,19 +3,14 @@ import DeliveryService from "../services/delivery.services";
 import { deserializeUser } from "./middleware/deserializeUser";
 import { requestUser } from "./middleware/requestUser";
 import { IncomingLoginData } from "./middleware/validation/login.validation";
-import { OrderMenuValidation } from "./middleware/validation/orderMenu.validation";
 import { signWihtJWT } from "../utils/jwt.utils";
 import config from "../../config";
 import { Channel } from "amqplib";
 import { SubscribeMessage } from "../utils/rabbitMQ.utils";
 import { ApiErrorHandler } from "./ApiErrorHandler";
-import {
-  IncomingDeliveryData,
-  UpdateDeliveryData,
-} from "./middleware/validation/deliveryman.validation";
+import { IncomingDeliveryData } from "./middleware/validation/deliveryman.validation";
 import { IncomingValidationData } from "./middleware/IncomingValidationData";
 import { omit } from "lodash";
-import { IncomingOrderData } from "./middleware/validation/orders.validation";
 import { generateNewAccessToken } from "../utils/token.utils";
 
 const api = (app: Application, channel: Channel) => {
@@ -27,6 +22,7 @@ const api = (app: Application, channel: Channel) => {
     config.deliveryman_binding_key
   );
 
+  //sign up a new deliveryman
   app.post(
     "/signup",
     IncomingValidationData(IncomingDeliveryData),
@@ -42,6 +38,7 @@ const api = (app: Application, channel: Channel) => {
     }
   );
 
+  //login
   app.post(
     "/login",
     IncomingValidationData(IncomingLoginData),
@@ -98,7 +95,7 @@ const api = (app: Application, channel: Channel) => {
       }
     }
   );
-
+  // return all deliverymen, this function use pagination logic, so we need to handle query
   app.get("/all-deliveryman", async (req: Request, res: Response) => {
     try {
       const page =
@@ -116,6 +113,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  // the function used for define the best choice. this function only needs to return the valid delivery persons
   app.get("/valid-deliveryman", async (req: Request, res: Response) => {
     try {
       const result = await service.GetAllValidDeliverymanService();
@@ -130,11 +128,12 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  // the function should return deliveryman for order
   app.get("/deliveryman/:name", async (req: Request, res: Response) => {
     try {
       const name = req.params.name;
       const isCoords = req.query.isCoords === "true";
-      const result = await service.GetDeliverymanByIdService(name, isCoords);
+      const result = await service.GetDeliverymanByNameService(name, isCoords);
       if (!result)
         return res
           .status(404)
@@ -145,6 +144,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //defining the delivery person's info for order based on its ID
   app.get("/deliveryman-for-order/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -161,6 +161,7 @@ const api = (app: Application, channel: Channel) => {
 
   app.use([deserializeUser, requestUser]);
 
+  //the function return deliveryman based on access token
   app.get("/deliveryman", async (req: Request, res: Response) => {
     try {
       const id = res.locals.delivery.deliverymanId;
@@ -175,6 +176,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //the function returns the specific person's feedbacks based on provided ID and anount of feedbacks.
   app.get("/deliveryman-feedbacks", async (req: Request, res: Response) => {
     try {
       const id = res.locals.delivery.deliverymanId;
@@ -205,6 +207,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //the function returns delivery person's activities, in this case only order activities
   app.get("/delivery-activities", async (req: Request, res: Response) => {
     try {
       const id = res.locals.delivery.deliverymanId;
@@ -242,24 +245,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
-  app.put(
-    "/update-delivery",
-    IncomingValidationData(UpdateDeliveryData),
-    async (req: Request, res: Response) => {
-      try {
-        const id = res.locals.delivery;
-        const result = await service.UpdateDeliverymanService(id, req.body);
-        if (!result)
-          return res
-            .status(404)
-            .json({ err: "Error while updating delivery info" });
-        return res.status(201).json(result);
-      } catch (error) {
-        ApiErrorHandler(error, res);
-      }
-    }
-  );
-
+  // this function is used for automatically refresh the access token, based on existing refresh token
   app.post("/refresh-token", async (req: Request, res: Response) => {
     try {
       const refresh = req.cookies["delivery-refreshToken"];
@@ -285,6 +271,7 @@ const api = (app: Application, channel: Channel) => {
     }
   });
 
+  //logs out
   app.delete("/log_out", async (req: Request, res: Response) => {
     try {
       res.clearCookie("delivery-refreshToken");

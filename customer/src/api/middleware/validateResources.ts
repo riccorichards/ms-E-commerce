@@ -2,6 +2,7 @@ import { AnyZodObject, ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
 import log from "../../utils/logger";
 
+//this function using the zod and receives zof schema to parse it as (body, params and quesry)
 export const validateIncomingData =
   (schema: AnyZodObject) =>
   (req: Request, res: Response, next: NextFunction) => {

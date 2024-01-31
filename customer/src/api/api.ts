@@ -3,7 +3,7 @@ import CustomerService from "../services/customer.services";
 import log from "../utils/logger";
 import { signWihtJWT } from "../utils/jwt.utils";
 import config from "../../config/default";
-import { get, omit } from "lodash";
+import { omit } from "lodash";
 import { deserializeUser } from "./middleware/deserializeUser";
 import { requestUser } from "./middleware/requestUser";
 import { Channel } from "amqplib";
@@ -15,15 +15,17 @@ import { CreateAddressSchema } from "./middleware/validation/address.validation"
 import { CreateBankAccSchema } from "./middleware/validation/bankAcc.validation";
 import { generateNewAccessToken } from "../utils/token.utils";
 import { BindingKeysType } from "../database/types/type.event";
+import ApiErrorHandler from "./apiErrorHandler";
 
 const api = (app: Application, channel: Channel) => {
   const service = new CustomerService();
 
   SubscribeMessage(channel, config.customer_queue, config.product_binding_key);
 
+  //create user => register
   app.post(
     "/register",
-    validateIncomingData(CreateUserSchema),
+    validateIncomingData(CreateUserSchema), // validation process, first then we start processing with incoming data we need check it
     async (req: Request, res: Response) => {
       try {
         const newCustomer = await service.SignUp(req.body);
@@ -31,12 +33,13 @@ const api = (app: Application, channel: Channel) => {
           return res.status(404).json({ err: "Error with Sign Up" });
         return res.status(201).json(newCustomer._id);
       } catch (error) {
-        log.error("Server Internal" + error);
-        return res.status(500).json({ err: error, msg: "Server Internal" });
+        //if there is any kind of error we have custome error function for handle this
+        ApiErrorHandler(error, res);
       }
     }
   );
 
+  //create session for user
   app.post(
     "/login",
     validateIncomingData(CreateSessionSchema),
@@ -56,7 +59,7 @@ const api = (app: Application, channel: Channel) => {
             type: "customer",
             session: result.newSession._id,
           },
-          { expiresIn: 1800 }
+          { expiresIn: 1800 } // 30 min
         );
 
         //create a refresh token
@@ -66,7 +69,7 @@ const api = (app: Application, channel: Channel) => {
             type: "customer",
             session: result.newSession._id,
           },
-          { expiresIn: 2592000 }
+          { expiresIn: 1296000 } //15 days
         );
 
         res.cookie("accessToken", accessToken, {
@@ -89,15 +92,15 @@ const api = (app: Application, channel: Channel) => {
 
         return res.status(201).json({
           customer: omit(result.user.toJSON(), "password"),
-          ttl: 1800,
+          ttl: 1800, // we are sending TTl to the client for automatically generation a new access token
         });
       } catch (error) {
-        log.error("Server Internal" + error);
-        return res.status(500).json({ err: error, msg: "Server Internal" });
+        ApiErrorHandler(error, res);
       }
     }
   );
 
+  //adding the address
   app.post(
     "/address",
     validateIncomingData(CreateAddressSchema),
@@ -110,18 +113,17 @@ const api = (app: Application, channel: Channel) => {
             .json({ err: "Error with adding address information" });
         return res.status(201).json(address._id);
       } catch (error: any) {
-        log.error("Server Internal" + error);
-        return res.status(500).json({ err: error, msg: "Server Internal" });
+        ApiErrorHandler(error, res);
       }
     }
   );
 
+  //adding the bank acc
   app.post(
     "/bank-acc",
     validateIncomingData(CreateBankAccSchema),
     async (req: Request, res: Response) => {
       try {
-        console.log(req.body);
         const result = await service.UserBankAcc(req.body);
         if (!result)
           return res
@@ -130,12 +132,12 @@ const api = (app: Application, channel: Channel) => {
 
         return res.status(201).json(result._id);
       } catch (error: any) {
-        log.error("Server Internal" + error);
-        return res.status(500).json({ err: error, msg: "Server Internal" });
+        ApiErrorHandler(error, res);
       }
     }
   );
 
+  //returns information for order
   app.get(
     "/order-customer-info/:customerId",
     async (req: Request, res: Response) => {
@@ -149,35 +151,36 @@ const api = (app: Application, channel: Channel) => {
 
         return res.status(200).json(result);
       } catch (error) {
-        log.error("Server Internal" + error);
-        return res.status(500).json({ err: error, msg: "Server Internal" });
+        ApiErrorHandler(error, res);
       }
     }
   );
 
+  // return customers length for admin information
   app.get("/customers-length", async (req: Request, res: Response) => {
     try {
       const result = await service.GetCustomersLengthService();
       if (!result)
         return res
           .status(400)
-          .json({ msg: "Customer was not found on that ID" });
+          .json({ msg: "Error while fetching length of all customers" });
       return res.status(200).json(result);
     } catch (error) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 
+  // after this line each endpoint required customer's token
   app.use([deserializeUser, requestUser]);
 
+  // this update function handle the updating process and send the updated data via RabbitMQ to the another servers for update customer info inside orders and feedbacks
   app.put("/update-user", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
       const updatedUser = await service.UpdateUserProfile(userId, req.body);
       if (!updatedUser)
         return res.status(404).json({ err: "Error with updating process" });
-
+      //creating the event
       const event = {
         type: "update_customer_info",
         data: {
@@ -189,6 +192,7 @@ const api = (app: Application, channel: Channel) => {
         },
       };
 
+      //define all bindings where the customer data should sent
       const binding_keys_wrapper: BindingKeysType = {
         feedback: config.feedback_binding_key,
         vendor: config.vendor_binding_key,
@@ -196,6 +200,7 @@ const api = (app: Application, channel: Channel) => {
       };
 
       if (channel) {
+        //we need to loop on the binding keys to send the customer data to the both path
         for (const key in binding_keys_wrapper) {
           PublishMessage(
             channel,
@@ -216,24 +221,25 @@ const api = (app: Application, channel: Channel) => {
         ttl: 1800,
       });
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 
+  //updating the address
   app.put("/update-address", async (req: Request, res: Response) => {
     try {
+      //take user id from access token
       const userId = res.locals.user.user;
       const updatedAddress = await service.UpdateUserAddress(userId, req.body);
       if (!updatedAddress)
         return res.status(404).json({ err: "Error with updating process" });
       return res.status(201).json(updatedAddress);
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 
+  //updating the address
   app.put("/update-bank", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
@@ -243,11 +249,11 @@ const api = (app: Application, channel: Channel) => {
         return res.status(404).json({ err: "Error with updating process" });
       return res.status(201).json(updatedBank);
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 
+  //this fucntion helps us when the customer needs to update its password, so first the define the current password to ensure the corretness and then allow the customer to send a new password, after receiving the new password we hashing it and storing to the db
   app.post("/check-current-password", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
@@ -262,11 +268,11 @@ const api = (app: Application, channel: Channel) => {
           .json({ err: "Error with password checking process" });
       return res.status(201).json(result);
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 
+  //to find customer itself
   app.get("/find-user", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
@@ -278,14 +284,14 @@ const api = (app: Application, channel: Channel) => {
         .status(201)
         .json({ customer: omit(user.toJSON(), "password"), ttl: 1800 });
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
-
+  // returns customers feedbacks
   app.get("/customer-feeds", async (req: Request, res: Response) => {
     try {
       const userId = res.locals.user.user;
+      //this endpoint handles the pagination logic, so we need to define the page from the query
       const page =
         typeof req.query.page === "string"
           ? parseInt(req.query.page, 10)
@@ -299,22 +305,21 @@ const api = (app: Application, channel: Channel) => {
 
       return res.status(200).json(result);
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 
+  //customers log out
   app.delete("/log_out", async (req: Request, res: Response) => {
     try {
       res.clearCookie("refreshToken");
       res.clearCookie("accessToken");
       return res.status(201).json(null);
     } catch (error: any) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
-
+  //generate a new access token
   app.post("/refresh-token", async (req: Request, res: Response) => {
     try {
       const refresh = req.cookies["refreshToken"];
@@ -335,8 +340,7 @@ const api = (app: Application, channel: Channel) => {
 
       return res.status(200).json({ ttl: 1800 });
     } catch (error) {
-      log.error("Server Internal" + error);
-      return res.status(500).json({ err: error, msg: "Server Internal" });
+      ApiErrorHandler(error, res);
     }
   });
 };

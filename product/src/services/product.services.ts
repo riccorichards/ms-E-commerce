@@ -72,19 +72,6 @@ class ProductService {
     }
   }
 
-  async updateProductService(
-    id: number,
-    input: IncomingProductUpdateValidationType["body"]
-  ) {
-    try {
-      return await this.repository.updateProduct(id, input);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
-
   async deleteProductService(id: number) {
     try {
       return await this.repository.deleteProduct(id);

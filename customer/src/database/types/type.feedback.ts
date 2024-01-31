@@ -25,3 +25,9 @@ export interface UpdateFeedbackWithDaliverymanPhotoMessage {
   title: string;
   userId: number;
 }
+
+export interface UpdateFeedbackWithVendorInfoMessage {
+  vendorId: string;
+  image: string | null;
+  name: string | null;
+}

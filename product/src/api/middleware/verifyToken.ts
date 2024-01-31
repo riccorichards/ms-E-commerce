@@ -3,9 +3,9 @@ import jwt from "jsonwebtoken";
 import log from "../../utils/logger";
 import { get } from "lodash";
 
+//we are defining here permission only vendors for create a new food
 interface GlobalUserType {
   vendor?: string;
-  customer?: string;
 }
 
 const publicKey = Buffer.from(
@@ -31,7 +31,6 @@ export const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
 
     jwt.verify(accessToken, publicKey, (err: any, user: any) => {
       if (err) return res.status(403).json({ msg: "Invalid token" });
-      console.log(user, "<<<<<<<<<<<<<<<<<<, JWT");
       req.user = user;
       next();
     });

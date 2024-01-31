@@ -16,14 +16,8 @@ import {
 } from "../../api/middleware/validation/vendor.validation";
 import ErrorHandler from "./repoErrorHandler";
 import { CreateSessionSchemaType } from "../../api/middleware/validation/session.validation";
-import {
-  CreateAddressSchemaType,
-  UpdateAddressSchemaType,
-} from "../../api/middleware/validation/address.validation";
-import {
-  CreateTeamMemberSchemaType,
-  UpdateTeamMemberSchemaType,
-} from "../../api/middleware/validation/team.validation";
+import { CreateAddressSchemaType } from "../../api/middleware/validation/address.validation";
+import { CreateTeamMemberSchemaType } from "../../api/middleware/validation/team.validation";
 import {
   BioValidationType,
   workingDaysValidationType,
@@ -32,7 +26,7 @@ import { AddSocialUrlType } from "../../api/middleware/validation/socialUrls.val
 import { URL } from "node:url";
 import FoodsModel from "../models/foods.model";
 import { FoodMessageType } from "../types/type.foods";
-import { ImageMessageType, JustTestUpload } from "../types/type.imageUrl";
+import { ImageMessageType } from "../types/type.imageUrl";
 import GalleryModel from "../models/gallery.model";
 import { MessageOrderType, OrderDocument } from "../types/type.order";
 import OrderModel from "../models/order.model";
@@ -41,8 +35,8 @@ import {
   makeRequestWithRetries,
   takeUrl,
 } from "../../utils/makeRequestWithRetries";
-import { GalleryDocument, GalleryInputType } from "../types/type.gallery";
-import { TeamMemberType } from "../types/type.teamMember";
+import Dashboard from "../../utils/dashboard.utils";
+import { ObjectId } from "mongoose";
 
 interface VendorTotal {
   vendor: string;
@@ -53,22 +47,8 @@ interface WeeklyTopVendors {
   [key: string]: VendorTotal[];
 }
 
-function extrat(str: string) {
-  const uuidRegex =
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
-
-  const titleAndUuid = str.split("/")[1];
-
-  const uuidMatch = titleAndUuid.match(uuidRegex);
-  if (uuidMatch) {
-    const title = titleAndUuid
-      .replace("-" + uuidMatch[0], "")
-      .replace(".webp", "");
-    return title.trim();
-  }
-  return null;
-}
 class VendorRepo {
+  //create vendor
   async CreateVendor(input: CreateVendorSchemaType) {
     try {
       const newVendor = await VendorModel.create({
@@ -90,6 +70,7 @@ class VendorRepo {
     }
   }
 
+  //create session
   async CreateSession(
     input: CreateSessionSchemaType["body"],
     userAgent: string
@@ -120,6 +101,7 @@ class VendorRepo {
     }
   }
 
+  // add a new team member
   async TeamMembers(
     vendorId: string,
     input: CreateTeamMemberSchemaType["body"]
@@ -140,7 +122,7 @@ class VendorRepo {
       ErrorHandler(error);
     }
   }
-
+  //remove team member
   async RemoveMember(vendorId: string, memberId: string) {
     try {
       const vendor = await VendorModel.findById(vendorId);
@@ -158,6 +140,7 @@ class VendorRepo {
     }
   }
 
+  //update vendor profile
   async UpdateVendorProfile(
     query: string,
     input: UpdateVendorSchemaType["body"]
@@ -175,7 +158,7 @@ class VendorRepo {
 
       if (!feedbacks)
         throw new Error("Feedbacks was not found or data is not available");
-
+      //when name is defined we need to update all feedbacks for specific vendor
       if (name) {
         await Promise.all(
           feedbacks.map(async (feed) => {
@@ -194,25 +177,7 @@ class VendorRepo {
     }
   }
 
-  async UpdateTeamMember(
-    query: string,
-    input: UpdateTeamMemberSchemaType["body"]
-  ) {
-    try {
-      const profile = await VendorModel.findById(query);
-      const updatedTeamMember = await TeamModel.findByIdAndUpdate(
-        profile?.teamMember,
-        input,
-        { new: true }
-      );
-      if (!updatedTeamMember)
-        throw new Error("Error while updating the vendor's team member");
-      return updatedTeamMember;
-    } catch (error) {
-      ErrorHandler(error);
-    }
-  }
-
+  //add new address
   async AddVendorAddress(
     query: string,
     input: CreateAddressSchemaType["body"]
@@ -233,7 +198,6 @@ class VendorRepo {
     try {
       const vendor = await VendorModel.findById(vendorId);
       if (!vendor) throw new Error("Vendor not found");
-
       vendor.about = input.bio;
 
       await vendor.save();
@@ -297,20 +261,7 @@ class VendorRepo {
     }
   }
 
-  async updateFoodImage(input: JustTestUpload) {
-    try {
-      const { title } = input; //img title
-      const foodTitle = extrat(title);
-      const food = await FoodsModel.findOne({ title: foodTitle });
-
-      if (!food) throw new Error("Error ===>" + food);
-      food.image = title;
-      return await food.save();
-    } catch (error) {
-      ErrorHandler(error);
-    }
-  }
-
+  // the function takes event (msg) from the server when happened profile updates
   async updateFeedbackWithCustomerInfo(input: UpdateFeedbackWithCustomerInfo) {
     try {
       const { updatedImage, updatedUsername, userId } = input;
@@ -319,6 +270,7 @@ class VendorRepo {
       if (!feedbacks)
         throw new Error("Vendor's feeds Not Found or data is not available");
 
+      //updating process via promise
       return await Promise.all(
         feedbacks.map(async (feed) => {
           feed.author = updatedUsername;
@@ -326,18 +278,6 @@ class VendorRepo {
           return await feed.save();
         })
       );
-    } catch (error) {
-      ErrorHandler(error);
-    }
-  }
-
-  async UpdateBioInVendor(vendorId: string, input: BioValidationType["body"]) {
-    try {
-      const vendor = await VendorModel.findById(vendorId);
-
-      if (!vendor) throw new Error("Vendor not found");
-      vendor.about = input.bio;
-      return omit((await vendor.save()).toJSON(), "password");
     } catch (error) {
       ErrorHandler(error);
     }
@@ -417,8 +357,10 @@ class VendorRepo {
     }
   }
 
+  //retrieve all vendor's orders
   async GetVendorOrders(id: string, withCustomerInfo: boolean) {
     try {
+      //define the vendor with its orders, and select the fields which we want to extract from the per order
       const vendor = await VendorModel.findById(id).populate({
         path: "orders",
         select:
@@ -427,11 +369,14 @@ class VendorRepo {
 
       if (!vendor) throw new Error("Error while getting vendor's orders");
 
+      //so we are using promise to handle all retrieving process
       const ordersPromises = (vendor.orders as OrderDocument[]).map(
         async (order) => {
+          //so per order we need to take customers information if keywork is true (withCustomerInfo)
           let customerInfo;
           if (withCustomerInfo) {
             try {
+              //define customer's information
               customerInfo = await getCustomerInfo(order.customerId);
               if (!customerInfo) throw new Error("Customer not found");
             } catch (error) {
@@ -442,21 +387,22 @@ class VendorRepo {
               customerInfo = { error: "Customer info unavailable" };
             }
           }
+          //return order based on withCustomerInfo
           return {
             order_status: order.order_status,
             total_amount: order.total_amount,
             deliverymanName: order.deliverymanName,
-            customer: customerInfo || order.customerId,
+            customer: withCustomerInfo ? customerInfo : order.customerId,
             orderId: order.orderId,
             createdAt: order.createdAt,
           };
         }
       );
-
+      // wrapping into promise to wait all process to finish
       const orders = await Promise.all(ordersPromises);
       const maxItems = withCustomerInfo ? 10 : orders.length - 1;
       return orders
-        .filter((order) => order)
+        .filter((order) => order) // sometimes these is poteltial rick to receive null or undefined, so we need to filter it
         .sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -467,6 +413,7 @@ class VendorRepo {
     }
   }
 
+  //top customers
   async GetTopCustomers(id: string) {
     try {
       const vendor = await VendorModel.findById(id).populate({
@@ -481,13 +428,17 @@ class VendorRepo {
       if (!vendor.orders || vendor.orders.length === 0) {
         throw new Error("No orders for this vendor");
       }
-
+      //gropued orders based on customer's id
       const groupedByCustomerId = _.groupBy(vendor.orders, "customerId");
+
+      //we are mapping on the grouped object and extracting orders and customer id
       const topCustomers = _.map(
         groupedByCustomerId,
         async (orders, customerId) => {
+          //calculate orders sum based on per customer's id
           const totalAmount = _.sumBy(orders, "total_amount");
           try {
+            //define customer's information
             const customer = await getCustomerInfo(customerId);
             return {
               customer: customer,
@@ -508,6 +459,7 @@ class VendorRepo {
     }
   }
 
+  //retrieve vendor's order items based on provided order's id
   async GetVendorOrderItems(id: string, orderId: number) {
     try {
       const vendor = await VendorModel.findById(id).populate("orders");
@@ -535,13 +487,11 @@ class VendorRepo {
   async GetAllVendor() {
     try {
       const result = await VendorModel.find();
-      console.log(result);
       if (!result) throw new Error("Vendors' list is not available");
 
       return await Promise.all(
         result.map(async (vendor) => {
-          const url = `http://localhost:8007/file?title=${vendor.image}`;
-          const image = await makeRequestWithRetries(url, "GET");
+          const image = await takeUrl(vendor.image);
           if (!image) throw new Error("Error while taken image");
           vendor.image = image;
           return {
@@ -562,6 +512,7 @@ class VendorRepo {
     }
   }
 
+  //return vendor's feedbacks based on page
   async GetVendorsFeeds(vendorId: string, page: number) {
     try {
       const limit = 6;
@@ -603,6 +554,7 @@ class VendorRepo {
     }
   }
 
+  //return top vendor
   async GetTopVendors() {
     try {
       const vendors = await VendorModel.find({})
@@ -621,9 +573,12 @@ class VendorRepo {
 
       let weeklyTopVendors: WeeklyTopVendors = {};
 
+      //assign empty array to per weekdays
       weekDays.forEach((day) => (weeklyTopVendors[day] = []));
 
+      //iterate oven the vendors
       vendors.forEach((vendor) => {
+        //for per vendor we grouped orders based on weekdays to define how many order was created per weekdays for each vendor
         const groupedByDay = _.groupBy(
           vendor.orders,
           (order: OrderDocument) => {
@@ -631,11 +586,13 @@ class VendorRepo {
           }
         );
 
+        //then we need to iterate over the weekdays
         weekDays.forEach((day) => {
+          //calculate the total amount using grouped orders for per days
           const totalAmount = (
             (groupedByDay[day] as OrderDocument[]) || []
           ).reduce((acc, order) => acc + order.total_amount, 0);
-
+          //assign vendor name and total amount to per day
           weeklyTopVendors[day].push({
             vendor: vendor.name,
             totalAmount,
@@ -643,8 +600,9 @@ class VendorRepo {
         });
       });
 
+      //when we need to create a array of key iterate over each key(because it is array)
       Object.keys(weeklyTopVendors).forEach((day) => {
-        weeklyTopVendors[day].sort((a, b) => b.totalAmount - a.totalAmount);
+        weeklyTopVendors[day].sort((a, b) => b.totalAmount - a.totalAmount); //sorted
         weeklyTopVendors[day] = weeklyTopVendors[day].slice(0, 5);
       });
 
@@ -653,15 +611,17 @@ class VendorRepo {
       ErrorHandler(error);
     }
   }
-
+  //the function returns vendor's feedback
   async VendorData(id: string, amount: number) {
     try {
+      //grab vendor's feedbacks with limitation
       const vendorFeeds = await FeedsModel.find({ forVendorId: id }).limit(
         amount
       );
       if (!vendorFeeds)
         throw new Error("Data is not available or vendor has any feedback");
 
+      // converted image title into signed url and sorted it based on feedId
       const result = await Promise.all(
         vendorFeeds
           .sort((a, b) => b.feedId - a.feedId)
@@ -698,19 +658,22 @@ class VendorRepo {
     }
   }
 
+  // gain all necessary information about vendor for dashboard. the function takes some information to detect what kind of data it needs to retrieve
   async GetVendorDashboardData(
     id: string,
     dashboardInput: { field: string; time: string }
   ) {
     try {
+      //extractiong field and time
       const { field, time } = dashboardInput;
 
       if (!field || !time) {
         throw new Error("Wrong provided queries");
       }
-
+      //we need to convert it into lower case to easily define populations
       const fieldtoLowerCase = field.toLowerCase();
 
+      //we use switch to create cases
       switch (fieldtoLowerCase) {
         case "feeds":
           const vendor = await VendorModel.findById(id).populate(
@@ -723,88 +686,13 @@ class VendorRepo {
 
           switch (time) {
             case "1D":
-              const endDate = new Date();
-              const startDate = new Date();
-              startDate.setDate(endDate.getDate() - 29);
-
-              const groupFeedsByPerDay = _.groupBy(
-                vendor.feeds,
-                (feed: FeedbacksDocsType) => {
-                  return feed.createdAt.getDate();
-                }
-              );
-
-              let transformedFeedResult = [];
-              for (
-                let i = startDate;
-                i <= endDate;
-                i.setDate(i.getDate() + 1)
-              ) {
-                const day = i.getDate();
-
-                transformedFeedResult.push({
-                  date: day,
-                  value: groupFeedsByPerDay[day]
-                    ? groupFeedsByPerDay[day].length
-                    : 0,
-                });
-              }
-
-              return transformedFeedResult;
+              return Dashboard.feedbackTimeInterval1D(vendor.feeds);
             case "1H":
-              const groupFeedsByPerHrs = _.groupBy(
-                vendor.feeds,
-                (feed: FeedbacksDocsType) => {
-                  return feed.createdAt.getHours();
-                }
-              );
-
-              let transformedFeedsResultByHrs = [];
-              for (let hr = 0; hr < 24; hr++) {
-                transformedFeedsResultByHrs.push({
-                  date: hr,
-                  value: groupFeedsByPerHrs[hr]
-                    ? groupFeedsByPerHrs[hr].length
-                    : 0,
-                });
-              }
-              return transformedFeedsResultByHrs;
+              return Dashboard.feedbackTimeInterval1H(vendor.feeds);
             case "1W":
-              const groupFeedsByPerWeek = _.groupBy(
-                vendor.feeds,
-                (feed: FeedbacksDocsType) => {
-                  return feed.createdAt.getDay();
-                }
-              );
-
-              let transformedFeedsResultByWeek = [];
-              for (let w = 1; w <= 7; w++) {
-                transformedFeedsResultByWeek.push({
-                  date: w,
-                  value: groupFeedsByPerWeek[w]
-                    ? groupFeedsByPerWeek[w].length
-                    : 0,
-                });
-              }
-              return transformedFeedsResultByWeek;
+              return Dashboard.feedbackTimeInterval1W(vendor.feeds);
             case "1M":
-              const groupFeedsByPerMonth = _.groupBy(
-                vendor.feeds,
-                (feed: FeedbacksDocsType) => {
-                  return feed.createdAt.getMonth();
-                }
-              );
-
-              let transformedFeedsResultByMonth = [];
-              for (let m = 0; m <= 11; m++) {
-                transformedFeedsResultByMonth.push({
-                  date: m + 1,
-                  value: groupFeedsByPerMonth[m]
-                    ? groupFeedsByPerMonth[m].length
-                    : 0,
-                });
-              }
-              return transformedFeedsResultByMonth;
+              return Dashboard.feedbackTimeInterval1M(vendor.feeds);
           }
         case "earning":
           const vendorWithEarning = await VendorModel.findById(id).populate({
@@ -818,104 +706,21 @@ class VendorRepo {
 
           switch (time) {
             case "1D":
-              const endDate = new Date();
-              const startDate = new Date();
-              startDate.setDate(endDate.getDate() - 29);
-
-              const groupOrdersByPerDay = _.groupBy(
-                vendorWithEarning.orders,
-                (order: OrderDocument) => {
-                  return order.createdAt.toISOString().split("T")[0];
-                }
+              return Dashboard.earningTimeInterval1D(
+                vendorWithEarning.orders as []
               );
-
-              let transformedOrdersResult = [];
-              for (
-                let i = new Date(startDate);
-                i <= endDate;
-                i.setDate(i.getDate() + 1)
-              ) {
-                const isoDate = i.toISOString().split("T")[0];
-                const dailyOrders = groupOrdersByPerDay[isoDate] || [];
-
-                const dailyTotalAmount = (
-                  dailyOrders as OrderDocument[]
-                ).reduce((acc, order) => acc + order.total_amount, 0);
-
-                transformedOrdersResult.push({
-                  date: isoDate.split("-")[2],
-                  value: dailyTotalAmount,
-                });
-              }
-
-              return transformedOrdersResult;
             case "1H":
-              const groupedOrdersByPerHrs = _.groupBy(
-                vendorWithEarning.orders,
-                (order: OrderDocument) => {
-                  const hour = new Date(order.createdAt).getHours();
-                  return hour < 10 ? `0${hour}` : hour;
-                }
+              return Dashboard.earningTimeInterval1H(
+                vendorWithEarning.orders as []
               );
-
-              let transformedOrdersResultPerHrs = [];
-              for (let hr = 0; hr < 24; hr++) {
-                const hour = hr < 10 ? `0${hr}` : hr;
-                const hourlyOrders = groupedOrdersByPerHrs[hour] || [];
-
-                const totalAmountPerHr = (
-                  hourlyOrders as OrderDocument[]
-                ).reduce((acc, order) => acc + order.total_amount, 0);
-
-                transformedOrdersResultPerHrs.push({
-                  date: hr,
-                  value: totalAmountPerHr,
-                });
-              }
-
-              return transformedOrdersResultPerHrs;
             case "1W":
-              const groupedOrdersByWeekDays = _.groupBy(
-                vendorWithEarning.orders,
-                (order: OrderDocument) => {
-                  return new Date(order.createdAt).getDay();
-                }
+              return Dashboard.earningTimeInterval1W(
+                vendorWithEarning.orders as []
               );
-
-              let transformedOrdersResultWeekDays = [];
-              for (let w = 0; w < 7; w++) {
-                const weekDaysOrders = groupedOrdersByWeekDays[w] || [];
-                const totalAmountWeekDays = (
-                  weekDaysOrders as OrderDocument[]
-                ).reduce((acc, order) => acc + order.total_amount, 0);
-
-                transformedOrdersResultWeekDays.push({
-                  date: w + 1,
-                  value: totalAmountWeekDays,
-                });
-              }
-              return transformedOrdersResultWeekDays;
             case "1M":
-              const groupedOrdersByMonth = _.groupBy(
-                vendorWithEarning.orders,
-                (order: OrderDocument) => {
-                  return new Date(order.createdAt).getMonth();
-                }
+              return Dashboard.earningTimeInterval1M(
+                vendorWithEarning.orders as []
               );
-
-              let transformedOrdersResulMonth = [];
-              for (let m = 0; m <= 11; m++) {
-                const monthlyOrders = groupedOrdersByMonth[m] || [];
-                const totalAmountWeekDays = (
-                  monthlyOrders as OrderDocument[]
-                ).reduce((acc, order) => acc + order.total_amount, 0);
-
-                transformedOrdersResulMonth.push({
-                  date: m + 1,
-                  value: totalAmountWeekDays,
-                });
-              }
-              return transformedOrdersResulMonth;
           }
         case "orders":
           const vendorOrders = await VendorModel.findById(id).populate(
@@ -928,88 +733,13 @@ class VendorRepo {
 
           switch (time) {
             case "1D":
-              const endDate = new Date();
-              const startDate = new Date();
-              startDate.setDate(endDate.getDate() - 29);
-
-              const groupOrdersByPerDay = _.groupBy(
-                vendorOrders.orders,
-                (order: OrderDocument) => {
-                  return order.createdAt.getDate();
-                }
-              );
-
-              let transformedOrderResult = [];
-              for (
-                let i = startDate;
-                i <= endDate;
-                i.setDate(i.getDate() + 1)
-              ) {
-                const day = i.getDate();
-
-                transformedOrderResult.push({
-                  date: day,
-                  value: groupOrdersByPerDay[day]
-                    ? groupOrdersByPerDay[day].length
-                    : 0,
-                });
-              }
-
-              return transformedOrderResult;
+              return Dashboard.ordersTimeInterval1D(vendorOrders.orders as []);
             case "1H":
-              const groupOrderByPerHrs = _.groupBy(
-                vendorOrders.orders,
-                (order: OrderDocument) => {
-                  return order.createdAt.getHours();
-                }
-              );
-
-              let transformedOrderResultByHrs = [];
-              for (let hr = 0; hr < 24; hr++) {
-                transformedOrderResultByHrs.push({
-                  date: hr,
-                  value: groupOrderByPerHrs[hr]
-                    ? groupOrderByPerHrs[hr].length
-                    : 0,
-                });
-              }
-              return transformedOrderResultByHrs;
+              return Dashboard.ordersTimeInterval1H(vendorOrders.orders as []);
             case "1W":
-              const groupOrderByPerWeek = _.groupBy(
-                vendorOrders.orders,
-                (order: OrderDocument) => {
-                  return order.createdAt.getDay();
-                }
-              );
-
-              let transformedOrderResultByWeek = [];
-              for (let w = 0; w < 7; w++) {
-                transformedOrderResultByWeek.push({
-                  date: w + 1,
-                  value: groupOrderByPerWeek[w]
-                    ? groupOrderByPerWeek[w].length
-                    : 0,
-                });
-              }
-              return transformedOrderResultByWeek;
+              return Dashboard.ordersTimeInterval1W(vendorOrders.orders as []);
             case "1M":
-              const groupOrderByPerMonth = _.groupBy(
-                vendorOrders.orders,
-                (order: OrderDocument) => {
-                  return order.createdAt.getMonth();
-                }
-              );
-
-              let transformedOrderResultByMonth = [];
-              for (let m = 0; m <= 11; m++) {
-                transformedOrderResultByMonth.push({
-                  date: m + 1,
-                  value: groupOrderByPerMonth[m]
-                    ? groupOrderByPerMonth[m].length
-                    : 0,
-                });
-              }
-              return transformedOrderResultByMonth;
+              return Dashboard.ordersTimeInterval1M(vendorOrders.orders as []);
           }
       }
     } catch (error) {
@@ -1049,8 +779,15 @@ class VendorRepo {
       if (!vendor) throw new Error("Vendor was not found");
       vendor.image = photoTitle;
       await vendor.save();
-      const url = `http://localhost:8007/file?title=${vendor.image}`;
-      const image = await makeRequestWithRetries(url, "GET");
+
+      //also we need to update feeds
+      const feedbacks = await FeedsModel.find({ forVendorId: vendorId });
+      feedbacks.map(async (feed) => {
+        feed.targetImg = photoTitle;
+        return await feed.save();
+      });
+
+      const image = await takeUrl(vendor.image);
       if (!image) throw new Error("Error while taken image");
 
       vendor.image = image;
@@ -1060,6 +797,7 @@ class VendorRepo {
     }
   }
 
+  //retrieve vendor's information for order based on provided vendor's address
   async VendorForOrder(vendorAddress: string) {
     try {
       const vendor = await VendorModel.findOne({
@@ -1092,6 +830,7 @@ class VendorRepo {
     }
   }
 
+  //the function takes msg from feedback server to create new feedback, it happened because we need to make our services more independently
   async createNewFeeds(input: FeedbackMessageType) {
     try {
       const newFeedback = await FeedsModel.create(input);
@@ -1111,7 +850,7 @@ class VendorRepo {
       ErrorHandler(error);
     }
   }
-
+  // the same as feedback case
   async createNewOrder(input: MessageOrderType) {
     try {
       const newOrder = await OrderModel.create(input.order);
@@ -1132,24 +871,7 @@ class VendorRepo {
       ErrorHandler(error);
     }
   }
-
-  async updateFeeds(input: FeedbackMessageType) {
-    try {
-      const feedId = input.feedId;
-      const updatedFeedback = await FeedsModel.findOneAndUpdate(
-        { feedId: feedId },
-        input,
-        {
-          new: true,
-        }
-      );
-
-      return updatedFeedback;
-    } catch (error) {
-      ErrorHandler(error);
-    }
-  }
-
+  //removing feedback
   async deleteFeedsFromVendor(feedId: number) {
     try {
       const removedFeed = await FeedsModel.findOneAndRemove({ feedId: feedId });
@@ -1158,7 +880,7 @@ class VendorRepo {
       ErrorHandler(error);
     }
   }
-
+  // remove image from vendor's galley
   async deletePhotoFromVendorGallery(photo: ImageMessageType) {
     try {
       const vendor = await VendorModel.findById(photo.userId);
@@ -1182,7 +904,7 @@ class VendorRepo {
       ErrorHandler(error);
     }
   }
-
+  // we listening the msg from the product service and add a new product
   async createFood(input: FoodMessageType) {
     try {
       const newFood = await FoodsModel.create({ ...input, url: null });
@@ -1202,23 +924,7 @@ class VendorRepo {
     }
   }
 
-  async updateFood(input: FoodMessageType) {
-    try {
-      const foodId = input.foodId;
-      const updatedFood = await FoodsModel.findOneAndUpdate(
-        { foodId: foodId },
-        input,
-        {
-          new: true,
-        }
-      );
-
-      return updatedFood;
-    } catch (error) {
-      ErrorHandler(error);
-    }
-  }
-
+  //update vendor
   async updateVendor(vendorId: string, input: UpdateVendorSchemaType["body"]) {
     try {
       const updatedVendor = await VendorModel.findByIdAndUpdate(
@@ -1229,6 +935,14 @@ class VendorRepo {
         }
       );
       if (!updatedVendor) throw new Error("Error while updating a vendor");
+
+      //also we need to update feeds
+      const feedbacks = await FeedsModel.find({ forVendorId: vendorId });
+      feedbacks.map(async (feed) => {
+        feed.targetTitle = updatedVendor.name;
+        return await feed.save();
+      });
+
       return omit(updatedVendor?.toJSON, "password");
     } catch (error) {
       ErrorHandler(error);

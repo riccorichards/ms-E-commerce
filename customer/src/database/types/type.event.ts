@@ -2,6 +2,7 @@ import { CartMessageType } from "./type.cart";
 import {
   FeedbackMessageType,
   UpdateFeedbackWithDaliverymanPhotoMessage,
+  UpdateFeedbackWithVendorInfoMessage,
 } from "./type.feedback";
 import { WishlistMessageType } from "./type.wishlist";
 import { UploadFileType } from "./types.customer";
@@ -13,7 +14,8 @@ export interface EventType {
     | FeedbackMessageType
     | CartMessageType
     | UploadFileType
-    | UpdateFeedbackWithDaliverymanPhotoMessage;
+    | UpdateFeedbackWithDaliverymanPhotoMessage
+    | UpdateFeedbackWithVendorInfoMessage
 }
 
 export interface BindingKeysType {

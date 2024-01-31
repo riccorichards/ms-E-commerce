@@ -27,6 +27,7 @@ declare global {
     }
   }
 }
+
 const decodeIncomingToken = (token: string) => {
   try {
     return jwt.decode(token);

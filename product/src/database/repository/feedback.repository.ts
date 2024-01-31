@@ -6,6 +6,7 @@ import {
 } from "../types/types.feedback";
 
 class FeedbacksRepo {
+  //the product server receives a new feedback and adding it its databases
   async createFeedback(input: FeedbackMessageType) {
     try {
       return await initialize.Feedbacks.create(input);

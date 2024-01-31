@@ -3,6 +3,7 @@ import { validate } from "class-validator";
 import { NextFunction, Request, Response } from "express";
 import log from "../utils/logger";
 
+//validation middlaware generics and takes new class
 export function ValidateIncomingData<T>(dtoClass: new () => T) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {

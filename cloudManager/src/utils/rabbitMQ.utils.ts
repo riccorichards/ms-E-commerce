@@ -5,10 +5,13 @@ import log from "./logger";
 export const CreateChannel = async () => {
   try {
     if (config.message_broker_url) {
+      //define the connetion process with RabbitMQ server (in my case it is in my local machine)
       const connection: Connection = await amqplib.connect(
         config.message_broker_url
       );
+      //creating the channel
       const channel: Channel = await connection.createChannel();
+      //and define exchange in this channel
       await channel.assertExchange(config.exchange_name, "direct", {
         durable: true,
       });
@@ -22,9 +25,9 @@ export const CreateChannel = async () => {
 
 // publish messages
 export const PublishMessage = async (
-  channel: Channel,
-  binding_key: string,
-  message: string
+  channel: Channel, //for publishing our our messages we need to define the channel
+  binding_key: string, // the binding key (it is used for simplify the search process)
+  message: string // and the data (msg)
 ) => {
   try {
     channel.publish(config.exchange_name, binding_key, Buffer.from(message));

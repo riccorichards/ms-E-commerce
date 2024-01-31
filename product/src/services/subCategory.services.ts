@@ -10,10 +10,7 @@ class SubCatService {
     this.repository = new subCatRepo();
   }
 
-  async createSubCatService(
-    input: IncomingSubCatValidationType["body"]
-    //vendorId: string
-  ) {
+  async createSubCatService(input: IncomingSubCatValidationType["body"]) {
     try {
       return await this.repository.createSubCut(input);
     } catch (error: any) {
@@ -65,24 +62,6 @@ class SubCatService {
   async getMainCatSubCatsService(id: number) {
     try {
       return await this.repository.getMainCatSubCats(id);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
-  async updateSubCatService(id: number, input: SubCatInputType) {
-    try {
-      return await this.repository.updateSubCat(id, input);
-    } catch (error: any) {
-      log.error({
-        err: error.message,
-      });
-    }
-  }
-  async deleteSubCatService(id: number) {
-    try {
-      return await this.repository.deleteSubCat(id);
     } catch (error: any) {
       log.error({
         err: error.message,

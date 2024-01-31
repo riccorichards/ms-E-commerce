@@ -17,6 +17,7 @@ import { CreateUserSchemaType } from "../api/middleware/validation/user.validati
 import {
   FeedbackMessageType,
   UpdateFeedbackWithDaliverymanPhotoMessage,
+  UpdateFeedbackWithVendorInfoMessage,
 } from "../database/types/type.feedback";
 
 class CustomerService {
@@ -155,6 +156,15 @@ class CustomerService {
     }
   }
 
+  async UpdateFeedbackWithVendorInfoService(
+    msg: UpdateFeedbackWithVendorInfoMessage
+  ) {
+    try {
+      return await this.repository.UpdateFeedbackWithVendorInfo(msg);
+    } catch (error: any) {
+      log.error({ err: error.message });
+    }
+  }
   async WishlistItems(input: WishlistMessageType) {
     try {
       return await this.repository.AddWishlistItem(input);
@@ -191,6 +201,7 @@ class CustomerService {
     }
   }
 
+  //the customer server is listening to the messages
   async SubscribeEvent(event: EventType, channel: Channel, msg: Message) {
     log.info(
       "========================== Triggering an event ======================"
@@ -205,10 +216,10 @@ class CustomerService {
           this.ManageCart(event.data as CartMessageType);
           break;
         case "empty_cart":
-          this.AddOrderAndMakeEmptyCart(event.data.userId as string);
+          const data = event.data as CartMessageType;
+          this.AddOrderAndMakeEmptyCart(data.userId);
           break;
         case "add_feedback":
-          console.log("im here");
           this.ManageReview(event.data as FeedbackMessageType);
           break;
         case "upload_profile_url":
@@ -217,6 +228,11 @@ class CustomerService {
         case "update_deliveryman_photo":
           this.UpdateFeedWithDeliverymanPhotoService(
             event.data as UpdateFeedbackWithDaliverymanPhotoMessage
+          );
+          break;
+        case "update_feedback_info":
+          this.UpdateFeedbackWithVendorInfoService(
+            event.data as UpdateFeedbackWithVendorInfoMessage
           );
           break;
         default:

@@ -8,6 +8,7 @@ export const deserializeUser = async (
   res: Response,
   next: NextFunction
 ) => {
+  
   const accessToken =
     get(req, "cookies.delivery-accessToken") ||
     get(req, "headers.authorization", "").replace(/^Bearer\s/, "");

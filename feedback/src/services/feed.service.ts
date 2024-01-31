@@ -19,10 +19,6 @@ class FeedService {
     return await this.feedRepo.CreateFeedback(input);
   }
 
-  async CustomerFeedsService(id: string, page: number) {
-    return await this.feedRepo.CustomerFeeds(id, page);
-  }
-
   async GetFeedbacksLengthService() {
     return await this.feedRepo.GetFeedbacksLength();
   }

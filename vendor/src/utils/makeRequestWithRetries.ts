@@ -54,6 +54,7 @@ async function simpleAxiosRequest(
   }
 }
 
+//make a request to the customer server to take customer information
 export async function getCustomerInfo(customerId: string) {
   const url = `http://localhost:8001/order-customer-info/${customerId}`;
   const customer = await makeRequestWithRetries(url, "GET");
@@ -61,6 +62,7 @@ export async function getCustomerInfo(customerId: string) {
   return customer;
 }
 
+//make request to the cloudManager server to take signed url for the image
 export async function takeUrl(title: string) {
   const url = `http://localhost:8007/file?title=${title}`;
   const image = await makeRequestWithRetries(url, "GET");

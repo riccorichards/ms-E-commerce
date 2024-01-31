@@ -12,5 +12,7 @@ export default {
   message_broker_url: process.env["MESSAGE_BROKER_URL"],
   exchange_name: "exchange_name",
   vendor_binding_key: "path_to_vendor",
+  customer_binding_key: "path_to_customer",
+  deliveryman_binding_key: "path_to_deliveryman",
   vendor_queue: "vendor",
 };

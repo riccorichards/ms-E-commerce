@@ -27,6 +27,7 @@ const api = async (app: Application) => {
 
   const channel = await CreateChannel();
 
+  //this functioc's capability is to gain all delivery person's order
   app.get(
     "/deliveryman-orders/:deliveryName",
     async (req: Request, res: Response) => {
@@ -44,6 +45,7 @@ const api = async (app: Application) => {
 
   app.use(verifyJWT);
 
+  //create a new order (converting cart into orderItems)
   app.post(
     "/order",
     ValidateIncomingData(OrderInputValidation),
@@ -56,6 +58,7 @@ const api = async (app: Application) => {
             .status(404)
             .json({ msg: "Error while creating a new order" });
 
+        //we need to send information via RabbitMQ to define that the convertion process successfully ended and the customer servers should reset the cart field
         const event = {
           type: "empty_cart",
           data: { userId: req.body.customerId },
@@ -75,7 +78,7 @@ const api = async (app: Application) => {
       }
     }
   );
-
+  //create an order complete and send it to participants
   app.post(
     "/shipping",
     ValidateIncomingData(ShippingInputValidation),
@@ -87,21 +90,25 @@ const api = async (app: Application) => {
           return res
             .status(404)
             .json({ msg: "Error while creating a new shipping" });
-
+        // sometime order's status is pending, so we need to unsure that we are handling the completed order
         if (order.order_status === "complete") {
           const { id, createdAt, total_amount, ...other } = order;
+
+          //grouping the order's items based on items' addresses, that because we need to define which vendor belongs the order. As we know one order perheps includes several vendors, so we need to handle create a new order based on specific vendor.
           const groupItemsBasedOnAddress = _.groupBy(
             order.orderItem,
             "product_address"
           );
+          //here we iterate on the grouped order, and extracting items' for vendor and addresses
           _.forEach(
             groupItemsBasedOnAddress,
             (itemForVendor, vendorAddress) => {
+              //as we know "itemForVendor" consist with orderItems based on addresses
               const calcTotalPrice = itemForVendor.reduce(
                 (acc, item) => acc + parseFloat(item.product_price),
                 0
               );
-
+              // create event for sending per vendor
               const event = {
                 type: "new_order_for_vendor",
                 data: {
@@ -123,12 +130,13 @@ const api = async (app: Application) => {
               }
             }
           );
-
+          //also we need to send the entire order to the deliveryman server, so that's why we make a request to the customer server to take customer's order information
           if (channel) {
             const url = `http://localhost:8001/order-customer-info/${order.customerId}`;
             const customer = await makeRequestWithRetries(url, "GET");
             if (!customer)
               return res.status(400).json({ msg: "Customer was not found..." });
+            //we need to wait when the entire process finished
             const result = await Promise.all(
               order.orderItem.map(async (item) => {
                 const image = await takeUrl(item.product_image);
@@ -136,11 +144,12 @@ const api = async (app: Application) => {
                 return item;
               })
             );
+
             const event = {
               type: "new_order",
               data: { ...{ ...order, orderItem: result }, customer },
             };
-
+            //send order information to the deliveryman server
             PublishMessage(
               channel,
               config.deliveryman_binding_key,
@@ -154,7 +163,7 @@ const api = async (app: Application) => {
       }
     }
   );
-
+  //returns order list
   app.get("/orders-list", async (req: Request, res: Response) => {
     try {
       if (req.user) {
@@ -163,7 +172,6 @@ const api = async (app: Application) => {
         if (typeof req.query.page === "string") {
           page = parseInt(req.query.page);
         }
-        console.log("what going on?");
         const orderList = await service.GetOrdersListService(customerId, page);
         return res.status(200).json(orderList);
       }
@@ -172,6 +180,7 @@ const api = async (app: Application) => {
     }
   });
 
+  //return all orders, this is for admin panel
   app.get("/orders", async (req: Request, res: Response) => {
     try {
       const orders = await service.GetOrdersService();
@@ -181,6 +190,7 @@ const api = async (app: Application) => {
     }
   });
 
+  //it returns orders' information like length and total amount
   app.get("/orders-data", async (req: Request, res: Response) => {
     try {
       const orderData = await service.GetOrdersDataService();
@@ -190,6 +200,7 @@ const api = async (app: Application) => {
     }
   });
 
+  //define order based on id
   app.get("/order/:orderId", async (req: Request, res: Response) => {
     try {
       const orderId = parseInt(req.params.orderId);
@@ -200,6 +211,7 @@ const api = async (app: Application) => {
     }
   });
 
+  //the function handles the process of definition the popular foods
   app.get("/popular-foods", async (req: Request, res: Response) => {
     try {
       const result = await service.GetPopularFoodsService();
@@ -209,6 +221,7 @@ const api = async (app: Application) => {
     }
   });
 
+  //the fucntion defines top customers based on total amount of making order (orders length)
   app.get("/top-customers", async (req: Request, res: Response) => {
     try {
       const result = await service.GetTopCustomersService();
@@ -222,6 +235,7 @@ const api = async (app: Application) => {
     }
   });
 
+  //cancel order process, when it is on the pending stage
   app.delete("/cancel-order/:orderId", async (req: Request, res: Response) => {
     try {
       const orderId = parseInt(req.params.orderId);
