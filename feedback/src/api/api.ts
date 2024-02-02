@@ -209,11 +209,6 @@ const api = async (app: Application) => {
           );
 
           if (bindingsKey) {
-            console.log({
-              bindingsKey,
-              event,
-              note: "<=== Inside API feeds (Delete) ===> ",
-            });
             PublishMessage(channel, bindingsKey, JSON.stringify(event));
           }
         }

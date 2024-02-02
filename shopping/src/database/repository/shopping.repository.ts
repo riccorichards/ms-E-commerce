@@ -57,7 +57,14 @@ class ShoppingRepo {
         //push item's address
         vendorAddresses.push(item.product_address);
 
-        newOrder.orderItem.push(newItem);
+        const order = await this.orderRepository.findOne({
+          where: { id: newOrder.id },
+          relations: ["orderItem"],
+        });
+        if (!order) {
+          throw new Error("Order not found");
+        }
+        order.orderItem.push(newItem);
       }
       await this.orderRepository.save(newOrder);
 
