@@ -27,9 +27,9 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.7.0",
+    "@google-cloud/storage": "^7.12.1",
     "amqplib": "^0.10.3",
-    "axios": "^1.6.2",
+    "axios": "^1.6.8",
     "class-validator": "^0.14.0",
     "config": "^3.3.9",
     "cookie-parser": "^1.4.6",
